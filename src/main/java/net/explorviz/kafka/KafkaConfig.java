@@ -24,40 +24,40 @@ public class KafkaConfig {
 
   @ConfigProperty(name = "explorviz.schema-registry.url")
   String schemaRegistryUrl;
-  
+
   @ConfigProperty(name = "explorviz.commit-interval-ms")
   int commitIntervalMs;
 
   public int getCommitIntervalMs() {
-    return commitIntervalMs;
+    return this.commitIntervalMs;
   }
 
-  public void setCommitIntervalMs(int commitIntervalMs) {
+  public void setCommitIntervalMs(final int commitIntervalMs) {
     this.commitIntervalMs = commitIntervalMs;
   }
 
   public Class<EVSpanTimestampKafkaExtractor> getTimestampExtractor() {
-    return TIMESTAMP_EXTRACTOR;
+    return this.TIMESTAMP_EXTRACTOR;
   }
 
   public String getApplicationId() {
-    return applicationId;
+    return this.applicationId;
   }
 
   public String getBootstrapServers() {
-    return bootstrapServers;
+    return this.bootstrapServers;
   }
 
   public String getInTopic() {
-    return inTopic;
+    return this.inTopic;
   }
 
   public String getOutTopic() {
-    return outTopic;
+    return this.outTopic;
   }
 
   public String getSchemaRegistryUrl() {
-    return schemaRegistryUrl;
+    return this.schemaRegistryUrl;
   }
 
 }

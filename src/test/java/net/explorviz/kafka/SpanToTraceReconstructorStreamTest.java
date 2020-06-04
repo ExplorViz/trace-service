@@ -48,37 +48,36 @@ class SpanToTraceReconstructorStreamTest {
 
     final MockSchemaRegistryClient mockSRC = new MockSchemaRegistryClient();
 
-    final Topology topo = new SpanToTraceReconstructorStream(mockSRC, config).getTopology();
+    final Topology topology =
+        new SpanToTraceReconstructorStream(mockSRC, this.config).getTopology();
 
-    this.evSpanSerDe = new SpecificAvroSerde<EVSpan>(mockSRC);
-    this.traceSerDe = new SpecificAvroSerde<Trace>(mockSRC);
+    this.evSpanSerDe = new SpecificAvroSerde<>(mockSRC);
+    this.traceSerDe = new SpecificAvroSerde<>(mockSRC);
 
     final Properties props = new Properties();
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test");
     props.put(StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG,
-        config.getTimestampExtractor());
+        this.config.getTimestampExtractor());
     props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:1234");
 
     final Map<String, String> conf =
         Map.of(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://dummy");
-    evSpanSerDe.serializer().configure(conf, false);
+    this.evSpanSerDe.serializer().configure(conf, false);
 
-    traceSerDe.deserializer().configure(conf, false);
+    this.traceSerDe.deserializer().configure(conf, false);
 
-    this.testDriver = new TopologyTestDriver(topo, props);
+    this.testDriver = new TopologyTestDriver(topology, props);
 
-    this.inputTopic = this.testDriver.createInputTopic(config.getInTopic(),
-        Serdes.String().serializer(), evSpanSerDe.serializer());
-    this.outputTopic = this.testDriver.createOutputTopic(config.getOutTopic(),
-        Serdes.String().deserializer(), traceSerDe.deserializer());
-
-    mockSRC.getAllSubjects().forEach(System.out::println);
+    this.inputTopic = this.testDriver.createInputTopic(this.config.getInTopic(),
+        Serdes.String().serializer(), this.evSpanSerDe.serializer());
+    this.outputTopic = this.testDriver.createOutputTopic(this.config.getOutTopic(),
+        Serdes.String().deserializer(), this.traceSerDe.deserializer());
   }
 
   @AfterEach
   void afterEach() {
-    evSpanSerDe.close();
-    traceSerDe.close();
+    this.evSpanSerDe.close();
+    this.traceSerDe.close();
     this.testDriver.close();
   }
 
@@ -93,11 +92,11 @@ class SpanToTraceReconstructorStreamTest {
     final String traceId = "testtraceid";
     final String operationName = "OpName";
 
-    Timestamp start1 = new Timestamp(10L, 0);
+    final Timestamp start1 = new Timestamp(10L, 0);
     final long end1 = 20L;
 
 
-    Timestamp start2 = new Timestamp(10L, 2323);
+    final Timestamp start2 = new Timestamp(10L, 2323);
     final long end2 = 80L;
 
 
@@ -138,9 +137,9 @@ class SpanToTraceReconstructorStreamTest {
   void testOrdering() {
 
 
-    Timestamp start1 = new Timestamp(5L, 13);
+    final Timestamp start1 = new Timestamp(5L, 13);
 
-    Timestamp start2 = new Timestamp(5L, 0);
+    final Timestamp start2 = new Timestamp(5L, 0);
     final String traceId = "testtraceid";
 
     final EVSpan evSpan1 =
@@ -158,8 +157,8 @@ class SpanToTraceReconstructorStreamTest {
 
     // Spans in span list must be sorted by start time
 
-    Instant instant1 = timestampToInstant(trace.getSpanList().get(0).getStartTime());
-    Instant instant2 = timestampToInstant(trace.getSpanList().get(1).getStartTime());
+    final Instant instant1 = this.timestampToInstant(trace.getSpanList().get(0).getStartTime());
+    final Instant instant2 = this.timestampToInstant(trace.getSpanList().get(1).getStartTime());
 
     assertTrue(instant1.isBefore(instant2));
 
@@ -172,11 +171,11 @@ class SpanToTraceReconstructorStreamTest {
   @Test
   void testTraceCreation() {
     final String traceId = "testtraceid";
-    Timestamp start = new Timestamp(10L, 0);
+    final Timestamp start = new Timestamp(10L, 0);
 
-    long end = timestampToInstant(start).toEpochMilli() + 17;
+    final long end = this.timestampToInstant(start).toEpochMilli() + 17;
 
-    final EVSpan span = new EVSpan("1", traceId, start, end, getDuration(start, end), "OpB", 1,
+    final EVSpan span = new EVSpan("1", traceId, start, end, this.getDuration(start, end), "OpB", 1,
         "samplehost", "sampleapp");
     this.inputTopic.pipeInput(span.getTraceId(), span);
 
@@ -202,7 +201,7 @@ class SpanToTraceReconstructorStreamTest {
   void testWindowing() {
     final String traceId = "testtraceid";
 
-    Timestamp start1 = new Timestamp(1584093875L, 0);
+    final Timestamp start1 = new Timestamp(1584093875L, 0);
 
     final long end1 = 1584093891;
 
@@ -214,15 +213,15 @@ class SpanToTraceReconstructorStreamTest {
 
 
 
-    final EVSpan evSpan1 = new EVSpan("1", traceId, start1, end1, getDuration(start1, end1), "OpA",
-        1, "samplehost", "sampleapp");
-    final EVSpan evSpan2 = new EVSpan("2", traceId, start2, end2, getDuration(start2, end2), "OpB",
-        1, "samplehost", "sampleapp");
+    final EVSpan evSpan1 = new EVSpan("1", traceId, start1, end1, this.getDuration(start1, end1),
+        "OpA", 1, "samplehost", "sampleapp");
+    final EVSpan evSpan2 = new EVSpan("2", traceId, start2, end2, this.getDuration(start2, end2),
+        "OpB", 1, "samplehost", "sampleapp");
 
     // This Span's timestamp is after closing the window containing
     // the first two spans
-    final EVSpan evSpan3 = new EVSpan("3", traceId, start3, end3, getDuration(start3, end3), "OpC",
-        1, "samplehost", "sampleapp");
+    final EVSpan evSpan3 = new EVSpan("3", traceId, start3, end3, this.getDuration(start3, end3),
+        "OpC", 1, "samplehost", "sampleapp");
 
 
     this.inputTopic.pipeInput(evSpan1.getTraceId(), evSpan1);
@@ -257,17 +256,17 @@ class SpanToTraceReconstructorStreamTest {
   void testTraceReduction() {
     final String operationName = "OpName";
 
-    Timestamp start1 = new Timestamp(10L, 0);
+    final Timestamp start1 = new Timestamp(10L, 0);
     final long end1 = 20L;
 
-    Timestamp start2 = new Timestamp(11L, 12983);
+    final Timestamp start2 = new Timestamp(11L, 12983);
     final long end2 = 80L;
 
     final String firstTraceId = "trace1";
 
-    final EVSpan evSpan1 = new EVSpan("1", firstTraceId, start1, end1, getDuration(start1, end1),
-        operationName, 1, "samplehost", "sampleapp");
-    final EVSpan evSpan2 = new EVSpan("2", "trace2", start2, end2, getDuration(start2, end2),
+    final EVSpan evSpan1 = new EVSpan("1", firstTraceId, start1, end1,
+        this.getDuration(start1, end1), operationName, 1, "samplehost", "sampleapp");
+    final EVSpan evSpan2 = new EVSpan("2", "trace2", start2, end2, this.getDuration(start2, end2),
         operationName, 265, "samplehost", "sampleapp");
 
 
@@ -306,24 +305,25 @@ class SpanToTraceReconstructorStreamTest {
     final String traceId2 = "trace2";
     final String operationName = "OpName";
 
-    Timestamp start1 = new Timestamp(10L, 0);
+    final Timestamp start1 = new Timestamp(10L, 0);
     final long end1 = 20L;
 
-    Instant start1plusWindow = timestampToInstant(start1).plusSeconds(7);
+    final Instant start1plusWindow = this.timestampToInstant(start1).plusSeconds(7);
 
-    Timestamp start2 = new Timestamp(start1plusWindow.getEpochSecond(), start1plusWindow.getNano());
-    final long end2 = timestampToInstant(start1).plusMillis(100).toEpochMilli();
+    final Timestamp start2 =
+        new Timestamp(start1plusWindow.getEpochSecond(), start1plusWindow.getNano());
+    final long end2 = this.timestampToInstant(start1).plusMillis(100).toEpochMilli();
 
 
-    final EVSpan evSpan1 = new EVSpan("1", traceId1, start1, end1, getDuration(start1, end1),
+    final EVSpan evSpan1 = new EVSpan("1", traceId1, start1, end1, this.getDuration(start1, end1),
         operationName, 1, "samplehost", "sampleapp");
-    final EVSpan evSpan2 = new EVSpan("2", traceId2, start2, end2, getDuration(start2, end2),
+    final EVSpan evSpan2 = new EVSpan("2", traceId2, start2, end2, this.getDuration(start2, end2),
         operationName, 1, "samplehost", "sampleapp");
 
-    inputTopic.pipeInput(evSpan1.getTraceId(), evSpan1);
-    inputTopic.pipeInput(evSpan2.getTraceId(), evSpan2);
+    this.inputTopic.pipeInput(evSpan1.getTraceId(), evSpan1);
+    this.inputTopic.pipeInput(evSpan2.getTraceId(), evSpan2);
 
-    List<Trace> traces = outputTopic.readValuesToList();
+    final List<Trace> traces = this.outputTopic.readValuesToList();
 
     traces.forEach(System.out::println);
 
@@ -332,12 +332,12 @@ class SpanToTraceReconstructorStreamTest {
 
   }
 
-  private Instant timestampToInstant(Timestamp ts) {
+  private Instant timestampToInstant(final Timestamp ts) {
     return Instant.ofEpochSecond(ts.getSeconds(), ts.getNanoAdjust());
   }
 
-  private long getDuration(Timestamp start, long end) {
-    return Duration.between(timestampToInstant(start), Instant.ofEpochMilli(end)).toNanos();
+  private long getDuration(final Timestamp start, final long end) {
+    return Duration.between(this.timestampToInstant(start), Instant.ofEpochMilli(end)).toNanos();
   }
 
 }

@@ -3,6 +3,8 @@ package net.explorviz.kafka;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
+import io.quarkus.runtime.ShutdownEvent;
+import io.quarkus.runtime.StartupEvent;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -11,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import net.explorviz.avro.EVSpan;
 import net.explorviz.avro.EVSpanData;
@@ -50,34 +53,46 @@ public class SpanToTraceReconstructorStream {
 
   private final Topology topology;
 
-  private SchemaRegistryClient registryClient;
-  private KafkaConfig config;
+  private final SchemaRegistryClient registryClient;
+  private final KafkaConfig config;
+
+  private KafkaStreams streams;
 
   @Inject
   public SpanToTraceReconstructorStream(final SchemaRegistryClient schemaRegistryClient,
-      KafkaConfig config) {
-
-    this.streamsConfig.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
-    this.streamsConfig.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, config.getCommitIntervalMs());
-    this.streamsConfig.put(StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG,
-        config.getTimestampExtractor());
-    this.streamsConfig.put(StreamsConfig.APPLICATION_ID_CONFIG, config.getApplicationId());
+      final KafkaConfig config) {
 
     this.registryClient = schemaRegistryClient;
     this.config = config;
 
     this.topology = this.buildTopology();
+    this.setupStreamsConfig();
   }
 
+  void onStart(@Observes final StartupEvent event) {
+    this.streams = new KafkaStreams(this.topology, this.streamsConfig);
+    this.streams.cleanUp();
+    this.streams.start();
+  }
 
-  public Topology getTopology() {
-    return this.topology;
+  void onStop(@Observes final ShutdownEvent event) {
+    this.streams.close();
+  }
+
+  private void setupStreamsConfig() {
+    this.streamsConfig.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG,
+        this.config.getBootstrapServers());
+    this.streamsConfig.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG,
+        this.config.getCommitIntervalMs());
+    this.streamsConfig.put(StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG,
+        this.config.getTimestampExtractor());
+    this.streamsConfig.put(StreamsConfig.APPLICATION_ID_CONFIG, this.config.getApplicationId());
   }
 
   private Topology buildTopology() {
     final StreamsBuilder builder = new StreamsBuilder();
 
-    final KStream<String, EVSpan> explSpanStream = builder.stream(config.getInTopic(),
+    final KStream<String, EVSpan> explSpanStream = builder.stream(this.config.getInTopic(),
         Consumed.with(Serdes.String(), this.getAvroSerde(false)));
 
     // Window spans in 4s intervals with 2s grace period
@@ -97,9 +112,8 @@ public class SpanToTraceReconstructorStream {
             trace.setStartTime(evSpan.getStartTime());
             trace.setEndTime(evSpanEndTime);
             trace.setOverallRequestCount(1);
-            trace.setDuration(Duration
-                .between(tsToInstant(trace.getStartTime()), Instant.ofEpochMilli(evSpanEndTime))
-                .toNanos());
+            trace.setDuration(Duration.between(this.tsToInstant(trace.getStartTime()),
+                Instant.ofEpochMilli(evSpanEndTime)).toNanos());
 
             trace.setTraceCount(1);
 
@@ -121,18 +135,19 @@ public class SpanToTraceReconstructorStream {
                 .findAny().ifPresentOrElse(s -> {
                   s.setRequestCount(s.getRequestCount() + 1);
 
-                  if (tsToInstant(evSpan.getStartTime()).isBefore(tsToInstant(s.getStartTime()))) {
+                  if (this.tsToInstant(evSpan.getStartTime())
+                      .isBefore(this.tsToInstant(s.getStartTime()))) {
                     s.setStartTime(evSpan.getStartTime());
                   }
 
                   s.setEndTime(Math.max(s.getEndTime(), evSpan.getEndTime()));
                 }, () -> trace.getSpanList().add(evSpan));
-            trace.getSpanList().stream().map(s -> tsToInstant(s.getStartTime()))
+            trace.getSpanList().stream().map(s -> this.tsToInstant(s.getStartTime()))
                 .min(Instant::compareTo)
                 .ifPresent(s -> trace.setStartTime(new Timestamp(s.getEpochSecond(), s.getNano())));
             trace.getSpanList().stream().mapToLong(EVSpan::getEndTime).max()
                 .ifPresent(trace::setEndTime);
-            long duration = Duration.between(tsToInstant(trace.getStartTime()),
+            final long duration = Duration.between(this.tsToInstant(trace.getStartTime()),
                 Instant.ofEpochMilli(trace.getEndTime())).toNanos();
             trace.setDuration(duration);
 
@@ -168,7 +183,7 @@ public class SpanToTraceReconstructorStream {
 
     // Reduce similar Traces of one window to a single Trace
     final KTable<Windowed<EVSpanKey>, Trace> reducedTraceTable = traceIdSpanStream
-        .groupByKey(Grouped.with(getWindowedAvroSerde(WINDOW_SIZE), getAvroSerde(false)))
+        .groupByKey(Grouped.with(this.getWindowedAvroSerde(WINDOW_SIZE), this.getAvroSerde(false)))
         .aggregate(Trace::new, (sharedTraceKey, trace, reducedTrace) -> {
 
 
@@ -182,8 +197,8 @@ public class SpanToTraceReconstructorStream {
 
             // Update start and end time of the trace
 
-            if (tsToInstant(trace.getStartTime())
-                .isBefore(tsToInstant(reducedTrace.getStartTime()))) {
+            if (this.tsToInstant(trace.getStartTime())
+                .isBefore(this.tsToInstant(reducedTrace.getStartTime()))) {
               reducedTrace.setStartTime(trace.getStartTime());
             }
 
@@ -210,16 +225,17 @@ public class SpanToTraceReconstructorStream {
       final List<EVSpan> list = trace.getSpanList();
       System.out.println("Trace with id " + trace.getTraceId());
       list.forEach((val) -> {
-        System.out.println(tsToInstant(val.getStartTime()).toEpochMilli() + " : " + val.getEndTime()
-            + " für " + val.getOperationName() + " mit Anzahl " + val.getRequestCount());
+        System.out
+            .println(this.tsToInstant(val.getStartTime()).toEpochMilli() + " : " + val.getEndTime()
+                + " für " + val.getOperationName() + " mit Anzahl " + val.getRequestCount());
       });
 
     });
 
     // Sort spans in each trace based of start time
     reducedIdTraceStream.peek((key, trace) -> trace.getSpanList().sort((s1, s2) -> {
-      Instant instant1 = tsToInstant(s1.getStartTime());
-      Instant instant2 = tsToInstant(s2.getStartTime());
+      final Instant instant1 = this.tsToInstant(s1.getStartTime());
+      final Instant instant2 = this.tsToInstant(s2.getStartTime());
       return instant1.compareTo(instant2);
     }));
 
@@ -228,19 +244,9 @@ public class SpanToTraceReconstructorStream {
     // use something like hash for trace
     // https://docs.confluent.io/current/streams/quickstart.html#purpose
 
-    reducedIdTraceStream.to(config.getOutTopic(),
+    reducedIdTraceStream.to(this.config.getOutTopic(),
         Produced.with(Serdes.String(), this.getAvroSerde(false)));
     return builder.build();
-  }
-
-  public void startStreamProcessing() {
-
-    @SuppressWarnings("resource")
-    final KafkaStreams streams = new KafkaStreams(this.topology, this.streamsConfig);
-    streams.cleanUp();
-    streams.start();
-
-    Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
   }
 
   /**
@@ -252,9 +258,8 @@ public class SpanToTraceReconstructorStream {
    */
   private <T extends SpecificRecord> SpecificAvroSerde<T> getAvroSerde(final boolean forKey) {
     final SpecificAvroSerde<T> serde = new SpecificAvroSerde<>(this.registryClient);
-    serde.configure(
-        Map.of(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, config.getSchemaRegistryUrl()),
-        forKey);
+    serde.configure(Map.of(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
+        this.config.getSchemaRegistryUrl()), forKey);
 
     return serde;
   }
@@ -266,15 +271,19 @@ public class SpanToTraceReconstructorStream {
    * @return a {@link Serde} for specific avro records wrapped in a time window
    */
   private <T extends SpecificRecord> Serde<Windowed<T>> getWindowedAvroSerde(
-      Duration windowSizeInMs) {
+      final Duration windowSizeInMs) {
 
-    Serde<T> keySerde = getAvroSerde(true);
+    final Serde<T> keySerde = this.getAvroSerde(true);
 
     return new WindowedSerdes.TimeWindowedSerde<>(keySerde, windowSizeInMs.toMillis());
   }
 
-  private Instant tsToInstant(Timestamp ts) {
+  private Instant tsToInstant(final Timestamp ts) {
     return Instant.ofEpochSecond(ts.getSeconds(), ts.getNanoAdjust());
+  }
+
+  public Topology getTopology() {
+    return this.topology;
   }
 
 
