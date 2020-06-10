@@ -8,25 +8,16 @@
       "type": "string"
     },
     {
+      "name": "landscapeToken",
+      "type": "string"
+    },
+    {
       "name": "traceId",
       "type": "string"
     },
     {
       "name": "startTime",
-      "type": {
-        "type": "record",
-        "name": "Timestamp",
-        "fields": [
-          {
-            "name": "seconds",
-            "type": "long"
-          },
-          {
-            "name": "nanoAdjust",
-            "type": "int"
-          }
-        ]
-      }
+      "type": "net.explorviz.avro.Timestamp"
     },
     {
       "name": "endTime",
@@ -49,7 +40,19 @@
       "type": "string"
     },
     {
+      "name": "hostIpAddress",
+      "type": "string"
+    },
+    {
       "name": "appName",
+      "type": "string"
+    },
+    {
+      "name": "appPid",
+      "type": "string"
+    },
+    {
+      "name": "appLanguage",
       "type": "string"
     }
   ]

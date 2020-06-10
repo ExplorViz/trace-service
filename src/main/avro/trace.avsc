@@ -9,20 +9,7 @@
     },
     {
       "name": "startTime",
-      "type": {
-        "type": "record",
-        "name": "Timestamp",
-        "fields": [
-          {
-            "name": "seconds",
-            "type": "long"
-          },
-          {
-            "name": "nanoAdjust",
-            "type": "int"
-          }
-        ]
-      }
+      "type": "net.explorviz.avro.Timestamp"
     },
     {
       "name": "endTime",
@@ -44,48 +31,7 @@
       "name": "spanList",
       "type": {
         "type": "array",
-        "items": {
-          "name": "EVSpan",
-          "type": "record",
-          "fields": [
-            {
-              "name": "spanId",
-              "type": "string"
-            },
-            {
-              "name": "traceId",
-              "type": "string"
-            },
-            {
-              "name": "startTime",
-              "type": "net.explorviz.avro.Timestamp"
-            },
-            {
-              "name": "endTime",
-              "type": "long"
-            },
-            {
-              "name": "duration",
-              "type": "long"
-            },
-            {
-              "name": "operationName",
-              "type": "string"
-            },
-            {
-              "name": "requestCount",
-              "type": "int"
-            },
-            {
-              "name": "hostname",
-              "type": "string"
-            },
-            {
-              "name": "appName",
-              "type": "string"
-            }
-          ]
-        }
+        "items": "net.explorviz.avro.EVSpan"
       }
     }
   ]
