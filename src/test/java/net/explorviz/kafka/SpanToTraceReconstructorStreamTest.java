@@ -3,6 +3,7 @@ package net.explorviz.kafka;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
@@ -100,11 +101,36 @@ class SpanToTraceReconstructorStreamTest {
     final long end2 = 80L;
 
 
-    final EVSpan evSpan1 =
-        new EVSpan("1", traceId, start1, end1, 10L, operationName, 1, "samplehost", "sampleapp");
-    final EVSpan evSpan2 =
-        new EVSpan("2", traceId, start2, end2, 40L, operationName, 1, "samplehost", "sampleapp");
-
+    final EVSpan evSpan1 = EVSpan.newBuilder()
+        .setLandscapeToken("tok")
+        .setSpanId("1")
+        .setTraceId(traceId)
+        .setStartTime(start1)
+        .setEndTime(end1)
+        .setDuration(10L)
+        .setOperationName(operationName)
+        .setRequestCount(1)
+        .setHostname("sampleHost")
+        .setHostIpAddress("1.2.3.4")
+        .setAppName("sampleapp")
+        .setAppPid("1234")
+        .setAppLanguage("lang")
+        .build();
+    final EVSpan evSpan2 = EVSpan.newBuilder()
+        .setLandscapeToken("tok")
+        .setSpanId("2")
+        .setTraceId(traceId)
+        .setStartTime(start2)
+        .setEndTime(end2)
+        .setDuration(40L)
+        .setOperationName(operationName)
+        .setRequestCount(1)
+        .setHostname("sampleHost")
+        .setHostIpAddress("1.2.3.4")
+        .setAppName("sampleapp")
+        .setAppPid("1234")
+        .setAppLanguage("lang")
+        .build();
 
     this.inputTopic.pipeInput(evSpan1.getTraceId(), evSpan1);
     this.inputTopic.pipeInput(evSpan2.getTraceId(), evSpan2);
@@ -142,11 +168,37 @@ class SpanToTraceReconstructorStreamTest {
     final Timestamp start2 = new Timestamp(5L, 0);
     final String traceId = "testtraceid";
 
-    final EVSpan evSpan1 =
-        new EVSpan("1", traceId, start1, 20L, 10L, "OpB", 1, "samplehost", "sampleapp");
-    final EVSpan evSpan2 =
-        new EVSpan("2", traceId, start2, 10L, 5L, "OpA", 1, "samplehost", "sampleapp");
+    final EVSpan evSpan1 = EVSpan.newBuilder()
+        .setLandscapeToken("tok")
+        .setSpanId("1")
+        .setTraceId(traceId)
+        .setStartTime(start1)
+        .setEndTime(20L)
+        .setDuration(10L)
+        .setOperationName("OpB")
+        .setRequestCount(1)
+        .setHostname("sampleHost")
+        .setHostIpAddress("1.2.3.4")
+        .setAppName("sampleapp")
+        .setAppPid("1234")
+        .setAppLanguage("lang")
+        .build();
 
+    final EVSpan evSpan2 = EVSpan.newBuilder()
+        .setLandscapeToken("tok")
+        .setSpanId("2")
+        .setTraceId(traceId)
+        .setStartTime(start2)
+        .setEndTime(10L)
+        .setDuration(5L)
+        .setOperationName("OpA")
+        .setRequestCount(1)
+        .setHostname("sampleHost")
+        .setHostIpAddress("1.2.3.4")
+        .setAppName("sampleapp")
+        .setAppPid("1234")
+        .setAppLanguage("lang")
+        .build();
     this.inputTopic.pipeInput(evSpan1.getTraceId(), evSpan1);
     this.inputTopic.pipeInput(evSpan2.getTraceId(), evSpan2);
 
@@ -175,8 +227,22 @@ class SpanToTraceReconstructorStreamTest {
 
     final long end = this.timestampToInstant(start).toEpochMilli() + 17;
 
-    final EVSpan span = new EVSpan("1", traceId, start, end, this.getDuration(start, end), "OpB", 1,
-        "samplehost", "sampleapp");
+    final EVSpan span = EVSpan.newBuilder()
+        .setLandscapeToken("tok")
+        .setSpanId("1")
+        .setTraceId(traceId)
+        .setStartTime(start)
+        .setEndTime(end)
+        .setDuration(this.getDuration(start, end))
+        .setOperationName("OpB")
+        .setRequestCount(1)
+        .setHostname("sampleHost")
+        .setHostIpAddress("1.2.3.4")
+        .setAppName("sampleapp")
+        .setAppPid("1234")
+        .setAppLanguage("lang")
+        .build();
+
     this.inputTopic.pipeInput(span.getTraceId(), span);
 
     final Trace trace = this.outputTopic.readValue();
@@ -213,15 +279,55 @@ class SpanToTraceReconstructorStreamTest {
 
 
 
-    final EVSpan evSpan1 = new EVSpan("1", traceId, start1, end1, this.getDuration(start1, end1),
-        "OpA", 1, "samplehost", "sampleapp");
-    final EVSpan evSpan2 = new EVSpan("2", traceId, start2, end2, this.getDuration(start2, end2),
-        "OpB", 1, "samplehost", "sampleapp");
+    final EVSpan evSpan1 = EVSpan.newBuilder()
+        .setLandscapeToken("tok")
+        .setSpanId("1")
+        .setTraceId(traceId)
+        .setStartTime(start1)
+        .setEndTime(end1)
+        .setDuration(this.getDuration(start1, end1))
+        .setOperationName("OpA")
+        .setRequestCount(1)
+        .setHostname("sampleHost")
+        .setHostIpAddress("1.2.3.4")
+        .setAppName("sampleapp")
+        .setAppPid("1234")
+        .setAppLanguage("lang")
+        .build();
+
+    final EVSpan evSpan2 = EVSpan.newBuilder()
+        .setLandscapeToken("tok")
+        .setSpanId("2")
+        .setTraceId(traceId)
+        .setStartTime(start2)
+        .setEndTime(end2)
+        .setDuration(this.getDuration(start2, end2))
+        .setOperationName("OpB")
+        .setRequestCount(1)
+        .setHostname("sampleHost")
+        .setHostIpAddress("1.2.3.4")
+        .setAppName("sampleapp")
+        .setAppPid("1234")
+        .setAppLanguage("lang")
+        .build();
 
     // This Span's timestamp is after closing the window containing
     // the first two spans
-    final EVSpan evSpan3 = new EVSpan("3", traceId, start3, end3, this.getDuration(start3, end3),
-        "OpC", 1, "samplehost", "sampleapp");
+    final EVSpan evSpan3 = EVSpan.newBuilder()
+        .setLandscapeToken("tok")
+        .setSpanId("3")
+        .setTraceId(traceId)
+        .setStartTime(start3)
+        .setEndTime(end3)
+        .setDuration(this.getDuration(start3, end3))
+        .setOperationName("OpC")
+        .setRequestCount(1)
+        .setHostname("sampleHost")
+        .setHostIpAddress("1.2.3.4")
+        .setAppName("sampleapp")
+        .setAppPid("1234")
+        .setAppLanguage("lang")
+        .build();
 
 
     this.inputTopic.pipeInput(evSpan1.getTraceId(), evSpan1);
@@ -264,10 +370,37 @@ class SpanToTraceReconstructorStreamTest {
 
     final String firstTraceId = "trace1";
 
-    final EVSpan evSpan1 = new EVSpan("1", firstTraceId, start1, end1,
-        this.getDuration(start1, end1), operationName, 1, "samplehost", "sampleapp");
-    final EVSpan evSpan2 = new EVSpan("2", "trace2", start2, end2, this.getDuration(start2, end2),
-        operationName, 265, "samplehost", "sampleapp");
+    final EVSpan evSpan1 = EVSpan.newBuilder()
+        .setLandscapeToken("tok")
+        .setSpanId("1")
+        .setTraceId(firstTraceId)
+        .setStartTime(start1)
+        .setEndTime(end1)
+        .setDuration(this.getDuration(start1, end1))
+        .setOperationName(operationName)
+        .setRequestCount(1)
+        .setHostname("sampleHost")
+        .setHostIpAddress("1.2.3.4")
+        .setAppName("sampleapp")
+        .setAppPid("1234")
+        .setAppLanguage("lang")
+        .build();
+
+    final EVSpan evSpan2 = EVSpan.newBuilder()
+        .setLandscapeToken("tok")
+        .setSpanId("2")
+        .setTraceId("trace2")
+        .setStartTime(start2)
+        .setEndTime(end2)
+        .setDuration(this.getDuration(start2, end2))
+        .setOperationName(operationName)
+        .setRequestCount(265)
+        .setHostname("sampleHost")
+        .setHostIpAddress("1.2.3.4")
+        .setAppName("sampleapp")
+        .setAppPid("1234")
+        .setAppLanguage("lang")
+        .build();
 
 
     this.inputTopic.pipeInput(evSpan1.getTraceId(), evSpan1);
@@ -315,10 +448,36 @@ class SpanToTraceReconstructorStreamTest {
     final long end2 = this.timestampToInstant(start1).plusMillis(100).toEpochMilli();
 
 
-    final EVSpan evSpan1 = new EVSpan("1", traceId1, start1, end1, this.getDuration(start1, end1),
-        operationName, 1, "samplehost", "sampleapp");
-    final EVSpan evSpan2 = new EVSpan("2", traceId2, start2, end2, this.getDuration(start2, end2),
-        operationName, 1, "samplehost", "sampleapp");
+    final EVSpan evSpan1 = EVSpan.newBuilder()
+        .setLandscapeToken("tok")
+        .setSpanId("1")
+        .setTraceId(traceId1)
+        .setStartTime(start1)
+        .setEndTime(end1)
+        .setDuration(this.getDuration(start1, end1))
+        .setOperationName(operationName)
+        .setRequestCount(1)
+        .setHostname("sampleHost")
+        .setHostIpAddress("1.2.3.4")
+        .setAppName("sampleapp")
+        .setAppPid("1234")
+        .setAppLanguage("lang")
+        .build();
+    final EVSpan evSpan2 = EVSpan.newBuilder()
+        .setLandscapeToken("tok")
+        .setSpanId("2")
+        .setTraceId(traceId2)
+        .setStartTime(start2)
+        .setEndTime(end2)
+        .setDuration(this.getDuration(start2, end2))
+        .setOperationName(operationName)
+        .setRequestCount(1)
+        .setHostname("sampleHost")
+        .setHostIpAddress("1.2.3.4")
+        .setAppName("sampleapp")
+        .setAppPid("1234")
+        .setAppLanguage("lang")
+        .build();
 
     this.inputTopic.pipeInput(evSpan1.getTraceId(), evSpan1);
     this.inputTopic.pipeInput(evSpan2.getTraceId(), evSpan2);
