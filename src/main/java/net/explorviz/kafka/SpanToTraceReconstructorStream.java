@@ -60,7 +60,7 @@ public class SpanToTraceReconstructorStream {
 
   @Inject
   public SpanToTraceReconstructorStream(final SchemaRegistryClient schemaRegistryClient,
-      final KafkaConfig config) {
+                                        final KafkaConfig config) {
 
     this.registryClient = schemaRegistryClient;
     this.config = config;
@@ -133,15 +133,15 @@ public class SpanToTraceReconstructorStream {
             trace.getSpanList().stream()
                 .filter(s -> s.getOperationName().contentEquals(evSpan.getOperationName()))
                 .findAny().ifPresentOrElse(s -> {
-                  s.setRequestCount(s.getRequestCount() + 1);
+              s.setRequestCount(s.getRequestCount() + 1);
 
-                  if (this.tsToInstant(evSpan.getStartTime())
-                      .isBefore(this.tsToInstant(s.getStartTime()))) {
-                    s.setStartTime(evSpan.getStartTime());
-                  }
+              if (this.tsToInstant(evSpan.getStartTime())
+                  .isBefore(this.tsToInstant(s.getStartTime()))) {
+                s.setStartTime(evSpan.getStartTime());
+              }
 
-                  s.setEndTime(Math.max(s.getEndTime(), evSpan.getEndTime()));
-                }, () -> trace.getSpanList().add(evSpan));
+              s.setEndTime(Math.max(s.getEndTime(), evSpan.getEndTime()));
+            }, () -> trace.getSpanList().add(evSpan));
             trace.getSpanList().stream().map(s -> this.tsToInstant(s.getStartTime()))
                 .min(Instant::compareTo)
                 .ifPresent(s -> trace.setStartTime(new Timestamp(s.getEpochSecond(), s.getNano())));
@@ -253,7 +253,7 @@ public class SpanToTraceReconstructorStream {
    * Creates a {@link Serde} for specific avro records using the {@link SpecificAvroSerde}
    *
    * @param forKey {@code true} if the Serde is for keys, {@code false} otherwise
-   * @param <T> type of the avro record
+   * @param <T>    type of the avro record
    * @return a Serde
    */
   private <T extends SpecificRecord> SpecificAvroSerde<T> getAvroSerde(final boolean forKey) {
