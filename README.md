@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/ExplorViz/trace-service.svg?branch=master)](https://travis-ci.org/ExplorViz/trace-service)
+
 # adapter-service project
 
 This project uses Quarkus, the Supersonic Subatomic Java Framework.
