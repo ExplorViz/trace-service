@@ -16,4 +16,5 @@ spec:
     spec:
       containers:
       - name: explorviz-trace-service
-        image: localhost:32000/explorviz/trace-service:latest
+        image: explorviz/explorviz-trace-service:latest
+        imagePullPolicy: IfNotPresent
