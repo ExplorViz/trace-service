@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: explorviz-trace-service
+  labels:
+    app: explorviz-trace-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: explorviz-trace-service
+  template:
+    metadata:
+      labels:
+        app: explorviz-trace-service
+    spec:
+      containers:
+      - name: explorviz-trace-service
+        image: explorviz/trace-service-jvm:latest
+        imagePullPolicy: IfNotPresent
