@@ -15,11 +15,12 @@ import java.util.Properties;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
-import net.explorviz.avro.EVSpan;
+import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.EVSpanData;
 import net.explorviz.avro.EVSpanKey;
 import net.explorviz.avro.Timestamp;
 import net.explorviz.avro.Trace;
+import net.explorviz.service.SpanToTraceAggregator;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -34,6 +35,7 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.Suppressed;
 import org.apache.kafka.streams.kstream.TimeWindowedKStream;
 import org.apache.kafka.streams.kstream.TimeWindows;
 import org.apache.kafka.streams.kstream.Windowed;
@@ -92,159 +94,55 @@ public class SpanToTraceReconstructorStream {
   private Topology buildTopology() {
     final StreamsBuilder builder = new StreamsBuilder();
 
-    final KStream<String, EVSpan> explSpanStream = builder.stream(this.config.getInTopic(),
+    final KStream<String, SpanDynamic> explSpanStream = builder.stream(this.config.getInTopic(),
         Consumed.with(Serdes.String(), this.getAvroSerde(false)));
 
+    /*
+     * Wenn Landscape Token nicht im Key: Traces verschiedenen Landscapes mit gleichen IDs werden
+     * vermischt!
+     */
+
+    /*
+     * Windowed aggregation wirklich notwendig?
+     * Traces sind eindeutig durch Trace-ID bestimmt.
+     * Aggregation in KTable: Neue Span -> Trace update -> Neuer Trace auf KStream für TraceId
+     * Jedes Update kann in Datenbank zu Update an Trace führen.
+     *  -> Statt Datenbank: Kafka Selbst (Stores?)
+     *        - LandscapeToken muss dann in Key (MUSS SOWIESO!)
+     *        - Löst auch das "Wie serialisieren"-Problem
+     *
+     * GGf. Nachteil:  Abfrage nach Spans für TraceID liefert zu zwei verschiedenen Zeitpunkten
+     * verschiedene Ergebnisse, d.h. bei zu frühen Anfragen ist Trace noch unvollständig
+     *
+     * Aktuell: Span kommt zu spät -> Neues Window für gleichen Trace
+     *
+     * Testcase:  "Spans with the same trace id in close temporal proximity should
+     * be aggregated in the same trace. If another span with the same trace id arrives later, it
+     * should not be included in the same trace."
+     *  -> Warum nicht? Gehört doch in diesen
+     *
+     */
+
+
     // Window spans in 4s intervals with 2s grace period
-    final TimeWindowedKStream<String, EVSpan> windowedEvStream =
+    final TimeWindowedKStream<String, SpanDynamic> windowedEvStream =
         explSpanStream.groupByKey().windowedBy(TimeWindows.of(WINDOW_SIZE).grace(GRACE_PERIOD));
 
     // Aggregate Spans to traces and deduplicate similar spans of a trace
+    SpanToTraceAggregator aggregator = new SpanToTraceAggregator();
     final KTable<Windowed<String>, Trace> traceTable =
-        windowedEvStream.aggregate(Trace::new, (traceId, evSpan, trace) -> {
+        windowedEvStream.aggregate(Trace::new,
+            (traceId, span, trace) -> aggregator.aggregate(traceId, trace, span),
+            Materialized.with(Serdes.String(), this.getAvroSerde(false)))
+            .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()));
 
-          // Initialize Span according to first span of the trace
-          final long evSpanEndTime = evSpan.getEndTime();
-          if (trace.getSpanList() == null) {
-            trace.setSpanList(new ArrayList<>());
-            trace.getSpanList().add(evSpan);
-
-            trace.setStartTime(evSpan.getStartTime());
-            trace.setEndTime(evSpanEndTime);
-            trace.setOverallRequestCount(1);
-            trace.setDuration(Duration.between(this.tsToInstant(trace.getStartTime()),
-                Instant.ofEpochMilli(evSpanEndTime)).toNanos());
-
-            trace.setTraceCount(1);
-
-            // set initial trace id - do not change, since this is the major key for kafka
-            // partitioning
-            trace.setTraceId(evSpan.getTraceId());
-          } else {
-
-            // TODO
-            // Implement
-            // - traceDuration
-            // - Tracesteps with caller callee each = EVSpan
+    // Add traces to stream independent of their windows
+    final KStream<String, Trace> traceStream =
+        traceTable.toStream().map((key, value) -> new KeyValue<>(key.key(), value));
 
 
-            // Find duplicates in Trace (via fqn), aggregate based on request count
-            // Furthermore, potentially update trace values
-            trace.getSpanList().stream()
-                .filter(s -> s.getOperationName().contentEquals(evSpan.getOperationName()))
-                .findAny().ifPresentOrElse(s -> {
-              s.setRequestCount(s.getRequestCount() + 1);
 
-              if (this.tsToInstant(evSpan.getStartTime())
-                  .isBefore(this.tsToInstant(s.getStartTime()))) {
-                s.setStartTime(evSpan.getStartTime());
-              }
-
-              s.setEndTime(Math.max(s.getEndTime(), evSpan.getEndTime()));
-            }, () -> trace.getSpanList().add(evSpan));
-            trace.getSpanList().stream().map(s -> this.tsToInstant(s.getStartTime()))
-                .min(Instant::compareTo)
-                .ifPresent(s -> trace.setStartTime(new Timestamp(s.getEpochSecond(), s.getNano())));
-            trace.getSpanList().stream().mapToLong(EVSpan::getEndTime).max()
-                .ifPresent(trace::setEndTime);
-            final long duration = Duration.between(this.tsToInstant(trace.getStartTime()),
-                Instant.ofEpochMilli(trace.getEndTime())).toNanos();
-            trace.setDuration(duration);
-
-
-          }
-          return trace;
-        }, Materialized.with(Serdes.String(), this.getAvroSerde(false)));
-
-    final KStream<Windowed<String>, Trace> traceStream = traceTable.toStream();
-
-
-    // Map traces to a new key that resembles all included spans
-    final KStream<Windowed<EVSpanKey>, Trace> traceIdSpanStream =
-        traceStream.flatMap((key, trace) -> {
-
-          final List<KeyValue<Windowed<EVSpanKey>, Trace>> result = new LinkedList<>();
-
-          final List<EVSpanData> spanDataList = new ArrayList<>();
-
-          for (final EVSpan span : trace.getSpanList()) {
-            spanDataList.add(
-                new EVSpanData(span.getOperationName(), span.getHostname(), span.getAppName()));
-          }
-
-          final EVSpanKey newKey = new EVSpanKey(spanDataList);
-
-          final Windowed<EVSpanKey> newWindowedKey = new Windowed<>(newKey, key.window());
-
-          result.add(KeyValue.pair(newWindowedKey, trace));
-          return result;
-        });
-
-
-    // Reduce similar Traces of one window to a single Trace
-    final KTable<Windowed<EVSpanKey>, Trace> reducedTraceTable = traceIdSpanStream
-        .groupByKey(Grouped.with(this.getWindowedAvroSerde(WINDOW_SIZE), this.getAvroSerde(false)))
-        .aggregate(Trace::new, (sharedTraceKey, trace, reducedTrace) -> {
-
-
-          if (reducedTrace.getTraceId() == null) {
-            reducedTrace = trace;
-          } else {
-            reducedTrace.setTraceCount(reducedTrace.getTraceCount() + 1);
-            // Use the Span list of the latest trace in the group
-            // Do so since span list only grow but never loose elements
-            reducedTrace.setSpanList(trace.getSpanList());
-
-            // Update start and end time of the trace
-
-            if (this.tsToInstant(trace.getStartTime())
-                .isBefore(this.tsToInstant(reducedTrace.getStartTime()))) {
-              reducedTrace.setStartTime(trace.getStartTime());
-            }
-
-
-            reducedTrace.setEndTime(Math.max(trace.getEndTime(), reducedTrace.getEndTime()));
-          }
-
-          return reducedTrace;
-        }, Materialized.with(this.getWindowedAvroSerde(WINDOW_SIZE), this.getAvroSerde(false)));
-    // .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()));
-
-    final KStream<Windowed<EVSpanKey>, Trace> reducedTraceStream = reducedTraceTable.toStream();
-
-    final KStream<String, Trace> reducedIdTraceStream = reducedTraceStream.flatMap((key, value) -> {
-
-      final List<KeyValue<String, Trace>> result = new LinkedList<>();
-
-      result.add(KeyValue.pair(value.getTraceId(), value));
-      return result;
-    });
-
-    reducedIdTraceStream.foreach((key, trace) -> {
-
-      final List<EVSpan> list = trace.getSpanList();
-      System.out.println("Trace with id " + trace.getTraceId());
-      list.forEach((val) -> {
-        System.out
-            .println(this.tsToInstant(val.getStartTime()).toEpochMilli() + " : " + val.getEndTime()
-                + " für " + val.getOperationName() + " mit Anzahl " + val.getRequestCount());
-      });
-
-    });
-
-    // Sort spans in each trace based of start time
-    reducedIdTraceStream.peek((key, trace) -> trace.getSpanList().sort((s1, s2) -> {
-      final Instant instant1 = this.tsToInstant(s1.getStartTime());
-      final Instant instant2 = this.tsToInstant(s2.getStartTime());
-      return instant1.compareTo(instant2);
-    }));
-
-    // TODO implement count attribute in Trace -> number of similar traces
-    // TODO Reduce traceIdAndAllTracesStream to similiar traces stream (map and reduce)
-    // use something like hash for trace
-    // https://docs.confluent.io/current/streams/quickstart.html#purpose
-
-    reducedIdTraceStream.to(this.config.getOutTopic(),
+    traceStream.to(this.config.getOutTopic(),
         Produced.with(Serdes.String(), this.getAvroSerde(false)));
     return builder.build();
   }

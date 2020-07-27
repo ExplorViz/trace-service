@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import javax.inject.Inject;
-import net.explorviz.avro.EVSpan;
+import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Timestamp;
 import net.explorviz.avro.Trace;
 import org.apache.kafka.common.serialization.Serdes;
@@ -35,10 +35,10 @@ class SpanToTraceReconstructorStreamTest {
 
 
   private TopologyTestDriver testDriver;
-  private TestInputTopic<String, EVSpan> inputTopic;
+  private TestInputTopic<String, SpanDynamic> inputTopic;
   private TestOutputTopic<String, Trace> outputTopic;
 
-  private SpecificAvroSerde<EVSpan> evSpanSerDe;
+  private SpecificAvroSerde<SpanDynamic> evSpanSerDe;
   private SpecificAvroSerde<Trace> traceSerDe;
 
   @Inject
@@ -85,7 +85,7 @@ class SpanToTraceReconstructorStreamTest {
 
   /**
    * Tests whether multiple spans with the same operation name belonging to the same trace are
-   * reduced to a single span with an updated {@link EVSpan#requestCount}
+   * reduced to a single span with an updated {@link SpanDynamic#requestCount}
    */
   @Test
   void testSpanDeduplication() {
@@ -94,42 +94,26 @@ class SpanToTraceReconstructorStreamTest {
     final String operationName = "OpName";
 
     final Timestamp start1 = new Timestamp(10L, 0);
-    final long end1 = 20L;
+    final Timestamp end1 = new Timestamp(20L, 0);;
 
 
     final Timestamp start2 = new Timestamp(10L, 2323);
-    final long end2 = 80L;
+    final Timestamp end2 = new Timestamp(80L, 0);;
 
 
-    final EVSpan evSpan1 = EVSpan.newBuilder()
+    final SpanDynamic evSpan1 = SpanDynamic.newBuilder()
         .setLandscapeToken("tok")
         .setSpanId("1")
         .setTraceId(traceId)
         .setStartTime(start1)
         .setEndTime(end1)
-        .setDuration(10L)
-        .setOperationName(operationName)
-        .setRequestCount(1)
-        .setHostname("sampleHost")
-        .setHostIpAddress("1.2.3.4")
-        .setAppName("sampleapp")
-        .setAppPid("1234")
-        .setAppLanguage("lang")
         .build();
-    final EVSpan evSpan2 = EVSpan.newBuilder()
+    final SpanDynamic evSpan2 = SpanDynamic.newBuilder()
         .setLandscapeToken("tok")
         .setSpanId("2")
         .setTraceId(traceId)
         .setStartTime(start2)
         .setEndTime(end2)
-        .setDuration(40L)
-        .setOperationName(operationName)
-        .setRequestCount(1)
-        .setHostname("sampleHost")
-        .setHostIpAddress("1.2.3.4")
-        .setAppName("sampleapp")
-        .setAppPid("1234")
-        .setAppLanguage("lang")
         .build();
 
     this.inputTopic.pipeInput(evSpan1.getTraceId(), evSpan1);
