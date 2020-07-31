@@ -5,7 +5,6 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import javax.enterprise.context.ApplicationScoped;
@@ -13,7 +12,7 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
-import net.explorviz.service.SpanToTraceAggregator;
+import net.explorviz.service.TraceAggregator;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -30,11 +29,13 @@ import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 /**
- * Collects spans for 10 seconds, grouped by the trace id, and forwards the resulting batch to the
- * topic 'span-batches'
+ * Contains a Kafka Streams topology that ingests {@link SpanDynamic} from a topic and aggregates
+ * spans that belong to a the same trace in a {@link Trace} object.
+ * The later contains a list of said spans as well as meta information, e.g., the landscape token.
+ * The resulting traces are persisted in a cassandra db.
  */
 @ApplicationScoped
-public class SpanToTraceReconstructorStream {
+public class TraceAggregationStream {
 
   private final Properties streamsConfig = new Properties();
 
@@ -47,8 +48,8 @@ public class SpanToTraceReconstructorStream {
   private KafkaStreams streams;
 
   @Inject
-  public SpanToTraceReconstructorStream(final SchemaRegistryClient schemaRegistryClient,
-                                        final KafkaConfig config) {
+  public TraceAggregationStream(final SchemaRegistryClient schemaRegistryClient,
+                                final KafkaConfig config) {
 
     this.registryClient = schemaRegistryClient;
     this.config = config;
@@ -87,19 +88,18 @@ public class SpanToTraceReconstructorStream {
         Consumed.with(Serdes.String(), this.getAvroSerde(false)));
 
     // Aggregate Spans to traces and store them in a state store "traces"
-    SpanToTraceAggregator aggregator = new SpanToTraceAggregator();
+    TraceAggregator aggregator = new TraceAggregator();
     final KTable<String, Trace> traceTable =
         spanStream.groupByKey().aggregate(Trace::new,
             (key, value, aggregate) -> aggregator.aggregate(key, aggregate, value),
             this.traceStore);
 
     // Stream the changelog to index, remove span list to avoid unnecessary data transfer
-    traceTable.toStream()
-        .mapValues(t -> {
-          t.setSpanList(Collections.emptyList());
-          return t;
-        })
-        .to(this.config.getOutTopic(), Produced.with(Serdes.String(), this.getAvroSerde(false)));
+    traceTable
+        .toStream()
+        .to(this.config.getOutTopic(),
+            Produced.with(Serdes.String(), this.getAvroSerde(false)));
+
 
 
     return builder.build();

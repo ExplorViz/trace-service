@@ -7,6 +7,8 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 // https://quarkus.io/guides/config#using-configproperties
 public class KafkaConfig {
 
+  public static final String TRACES_STORE = "traces";
+
   private final Class<EVSpanTimestampKafkaExtractor> TIMESTAMP_EXTRACTOR =
       EVSpanTimestampKafkaExtractor.class;
 
@@ -16,7 +18,7 @@ public class KafkaConfig {
   @ConfigProperty(name = "quarkus.kafka-streams.bootstrap-servers")
   String bootstrapServers;
 
-  @ConfigProperty(name = "quarkus.kafka-streams.topics")
+  @ConfigProperty(name = "explorviz.kafka-streams.topics.in")
   String inTopic;
 
   @ConfigProperty(name = "explorviz.kafka-streams.topics.out")

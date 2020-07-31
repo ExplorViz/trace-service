@@ -4,7 +4,6 @@ import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.quarkus.test.junit.QuarkusTest;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Properties;
@@ -19,7 +18,6 @@ import org.apache.kafka.streams.TestInputTopic;
 import org.apache.kafka.streams.TestOutputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
-import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -27,7 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
-class SpanToTraceReconstructorStreamTest {
+class TraceAggregationStreamTest {
 
 
   private TopologyTestDriver testDriver;
@@ -49,7 +47,7 @@ class SpanToTraceReconstructorStreamTest {
     assert config.getOutTopic() != null;
 
     final Topology topology =
-        new SpanToTraceReconstructorStream(mockSRC, this.config).getTopology();
+        new TraceAggregationStream(mockSRC, this.config).getTopology();
 
     this.evSpanSerDe = new SpecificAvroSerde<>(mockSRC);
     this.traceSerDe = new SpecificAvroSerde<>(mockSRC);

@@ -11,12 +11,14 @@ import net.explorviz.avro.Trace;
 /**
  * Contains methods that help to aggregate multiple span into a trace as they come in.
  */
-public class SpanToTraceAggregator {
+public class TraceAggregator {
 
 
 
   private Trace initTrace(String traceId, Trace freshTrace, SpanDynamic firstSpan) {
 
+
+    freshTrace.setTraceId(traceId);
 
     // Use linked list here to avoid costly reallocation of array lists
     // We don't need random access provided by array lists
@@ -56,12 +58,12 @@ public class SpanToTraceAggregator {
     }
 
     // Add the span to the trace at the correct position
-    int position = insertSorted(aggregate.getSpanList(), newSpan);
+    insertSorted(aggregate.getSpanList(), newSpan);
     // Depending on the position the span was inserted, the start or end time must be adjusted
-    if (position == 0) {
+    if (isBefore(newSpan.getStartTime(), aggregate.getStartTime())) {
       // Span is the current earliest in the trace
       aggregate.setStartTime(newSpan.getStartTime());
-    } else if (position == aggregate.getSpanList().size()) {
+    } else if (isAfter(newSpan.getEndTime(), aggregate.getEndTime())) {
       // Span is the current latest in the trace
       aggregate.setEndTime(newSpan.getEndTime());
     }
@@ -79,7 +81,7 @@ public class SpanToTraceAggregator {
    */
   private int insertSorted(List<SpanDynamic> spanList, SpanDynamic insertMe) {
     int i = 0;
-    while (isBefore(spanList.get(i).getStartTime(), insertMe.getEndTime())) {
+    while (i < spanList.size() && isBefore(spanList.get(i).getStartTime(), insertMe.getEndTime())) {
       i++;
     }
     spanList.add(i, insertMe);
@@ -98,6 +100,19 @@ public class SpanToTraceAggregator {
     Instant f = Instant.ofEpochSecond(one.getSeconds(), one.getNanoAdjust());
     Instant s = Instant.ofEpochSecond(two.getSeconds(), two.getNanoAdjust());
     return f.isBefore(s);
+  }
+
+  /**
+   * Checks if the first timestamp is after than the second.
+   *
+   * @param one the first timestamp
+   * @param two the second timestamp
+   * @return true iff first < second
+   */
+  private boolean isAfter(Timestamp one, Timestamp two) {
+    Instant f = Instant.ofEpochSecond(one.getSeconds(), one.getNanoAdjust());
+    Instant s = Instant.ofEpochSecond(two.getSeconds(), two.getNanoAdjust());
+    return f.isAfter(s);
   }
 
   private long millisBetween(Timestamp start, Timestamp end) {
