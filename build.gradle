@@ -36,6 +36,11 @@ dependencies {
 
   testImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'
   testImplementation 'io.quarkus:quarkus-junit5'
+
+  testImplementation group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
+  testImplementation group: 'org.cassandraunit', name: 'cassandra-unit', version: '4.3.1.0'
+
+
 }
 
 group 'net.explorviz'

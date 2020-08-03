@@ -4,6 +4,10 @@
   "name": "Trace",
   "fields": [
     {
+      "name": "landscapeToken",
+      "type": "string"
+    },
+    {
       "name": "traceId",
       "type": "string"
     },
@@ -21,11 +25,13 @@
     },
     {
       "name": "overallRequestCount",
-      "type": "int"
+      "type": "int",
+      "default": 1
     },
     {
       "name": "traceCount",
-      "type": "int"
+      "type": "int",
+      "default": 1
     },
     {
       "name": "spanList",

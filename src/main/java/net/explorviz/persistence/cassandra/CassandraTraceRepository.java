@@ -11,7 +11,7 @@ import javax.enterprise.context.ApplicationScoped;
 import net.explorviz.avro.Trace;
 import net.explorviz.persistence.PersistingException;
 import net.explorviz.persistence.TraceRepository;
-import net.explorviz.persistence.cassandra.codec.ValueMapper;
+import net.explorviz.persistence.cassandra.mapper.ValueMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

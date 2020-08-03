@@ -14,8 +14,8 @@ import com.datastax.oss.driver.api.querybuilder.schema.CreateTable;
 import com.datastax.oss.driver.api.querybuilder.schema.CreateType;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import net.explorviz.persistence.cassandra.codec.SpanCodec;
-import net.explorviz.persistence.cassandra.codec.TimestampCodec;
+import net.explorviz.persistence.cassandra.mapper.SpanCodec;
+import net.explorviz.persistence.cassandra.mapper.TimestampCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +34,7 @@ public class DBHelper {
   public static final String TRACES_TABLE_NAME = "traces";
 
 
-  public static final String TYPE_TIMESTAMP = "timestamp";
+  public static final String TYPE_TIMESTAMP = "ctimestamp";
   public static final String TYPE_SPAN = "span";
 
 
@@ -47,8 +47,8 @@ public class DBHelper {
   public static final String COL_START_TIME = "start_time";
   public static final String COL_END_TIME = "end_time";
 
-  public static final String COL_SPAN = "span";
   public static final String COL_SPAN_ID = "span_id";
+  public static final String COL_SPAN_TRACE_ID = "span_trace_id";
   public static final String COL_SPAN_PARENT_ID = "span_parent_id";
   public static final String COL_SPAN_START_TIME = "span_start_time";
   public static final String COL_SPAN_END_TIME = "span_end_time";
@@ -116,6 +116,7 @@ public class DBHelper {
     final CreateType createSpanUdt = SchemaBuilder
         .createType(KEYSPACE_NAME, TYPE_SPAN)
         .ifNotExists()
+        .withField(COL_SPAN_TRACE_ID, DataTypes.TEXT)
         .withField(COL_SPAN_ID, DataTypes.TEXT)
         .withField(COL_SPAN_PARENT_ID, DataTypes.TEXT)
         .withField(COL_SPAN_START_TIME, SchemaBuilder.udt(TYPE_TIMESTAMP, true))
@@ -168,7 +169,7 @@ public class DBHelper {
         .flatMap(ks -> ks.getUserDefinedType(TYPE_SPAN))
         .orElseThrow(IllegalStateException::new);
     final TypeCodec<UdtValue> appUdtCodec = codecRegistry.codecFor(spanUdt);
-    final SpanCodec spanCodec = new SpanCodec(appUdtCodec);
+    final SpanCodec spanCodec = new SpanCodec(appUdtCodec, timestampCodec);
     ((MutableCodecRegistry) codecRegistry).register(spanCodec);
 
     if (LOGGER.isInfoEnabled()) {
