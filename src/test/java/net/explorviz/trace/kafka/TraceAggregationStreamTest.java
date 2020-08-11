@@ -1,4 +1,4 @@
-package net.explorviz.kafka;
+package net.explorviz.trace.kafka;
 
 import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;

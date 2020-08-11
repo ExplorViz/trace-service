@@ -1,4 +1,4 @@
-package net.explorviz.service;
+package net.explorviz.trace.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 

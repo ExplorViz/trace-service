@@ -1,11 +1,12 @@
-package net.explorviz.service;
+package net.explorviz.trace.service;
 
-import java.time.Duration;
-import java.time.Instant;
+import static net.explorviz.trace.service.TimestampHelper.isAfter;
+import static net.explorviz.trace.service.TimestampHelper.isBefore;
+import static net.explorviz.trace.service.TimestampHelper.durationMs;
+
 import java.util.LinkedList;
 import java.util.List;
 import net.explorviz.avro.SpanDynamic;
-import net.explorviz.avro.Timestamp;
 import net.explorviz.avro.Trace;
 
 /**
@@ -29,7 +30,7 @@ public class TraceAggregator {
     freshTrace.setStartTime(firstSpan.getStartTime());
     freshTrace.setEndTime(firstSpan.getEndTime());
 
-    freshTrace.setDuration(millisBetween(firstSpan.getStartTime(), firstSpan.getEndTime()));
+    freshTrace.setDuration(durationMs(firstSpan.getStartTime(), firstSpan.getEndTime()));
 
     freshTrace.setOverallRequestCount(1);
     freshTrace.setTraceCount(1);
@@ -37,6 +38,7 @@ public class TraceAggregator {
     // set initial trace id - do not change, since this is the major key for kafka
     // partitioning
     freshTrace.setTraceId(freshTrace.getTraceId());
+    freshTrace.setLandscapeToken(firstSpan.getLandscapeToken());
 
     return freshTrace;
   }
@@ -89,36 +91,6 @@ public class TraceAggregator {
   }
 
 
-  /**
-   * Checks if the first timestamp is before than the second.
-   *
-   * @param one the first timestamp
-   * @param two the second timestamp
-   * @return true iff first < second
-   */
-  private boolean isBefore(Timestamp one, Timestamp two) {
-    Instant f = Instant.ofEpochSecond(one.getSeconds(), one.getNanoAdjust());
-    Instant s = Instant.ofEpochSecond(two.getSeconds(), two.getNanoAdjust());
-    return f.isBefore(s);
-  }
 
-  /**
-   * Checks if the first timestamp is after than the second.
-   *
-   * @param one the first timestamp
-   * @param two the second timestamp
-   * @return true iff first < second
-   */
-  private boolean isAfter(Timestamp one, Timestamp two) {
-    Instant f = Instant.ofEpochSecond(one.getSeconds(), one.getNanoAdjust());
-    Instant s = Instant.ofEpochSecond(two.getSeconds(), two.getNanoAdjust());
-    return f.isAfter(s);
-  }
-
-  private long millisBetween(Timestamp start, Timestamp end) {
-    Instant s = Instant.ofEpochSecond(start.getSeconds(), start.getNanoAdjust());
-    Instant e = Instant.ofEpochSecond(end.getSeconds(), end.getNanoAdjust());
-    return Duration.between(s, e).toMillis();
-  }
 
 }
