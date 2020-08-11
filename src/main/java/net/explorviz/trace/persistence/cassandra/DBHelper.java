@@ -1,4 +1,4 @@
-package net.explorviz.persistence.cassandra;
+package net.explorviz.trace.persistence.cassandra;
 
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.data.UdtValue;
@@ -14,8 +14,8 @@ import com.datastax.oss.driver.api.querybuilder.schema.CreateTable;
 import com.datastax.oss.driver.api.querybuilder.schema.CreateType;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import net.explorviz.persistence.cassandra.mapper.SpanCodec;
-import net.explorviz.persistence.cassandra.mapper.TimestampCodec;
+import net.explorviz.trace.persistence.cassandra.mapper.SpanCodec;
+import net.explorviz.trace.persistence.cassandra.mapper.TimestampCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,8 +110,9 @@ public class DBHelper {
     final CreateType createTimestampUdt = SchemaBuilder
         .createType(KEYSPACE_NAME, TYPE_TIMESTAMP)
         .ifNotExists()
-        .withField(COL_TIMESTAMP_SECONDS, DataTypes.INT)
+        .withField(COL_TIMESTAMP_SECONDS, DataTypes.BIGINT)
         .withField(COL_TIMESTAMP_NANO, DataTypes.INT);
+
 
     final CreateType createSpanUdt = SchemaBuilder
         .createType(KEYSPACE_NAME, TYPE_SPAN)
