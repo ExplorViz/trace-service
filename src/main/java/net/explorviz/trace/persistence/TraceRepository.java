@@ -1,5 +1,6 @@
-package net.explorviz.persistence;
+package net.explorviz.trace.persistence;
 
+import java.util.Optional;
 import net.explorviz.avro.Trace;
 
 /**
@@ -22,6 +23,13 @@ public interface TraceRepository {
    */
   void update(Trace trace) throws PersistingException;
 
+  /**
+   * Finds a trace for a given a landscape token and trace id.
+   * @param landscapeToken the landscape token
+   * @param traceId the trace id
+   * @return an optional containing the trace if existing and is empty otherwise
+   */
+  Optional<Trace> getTrace(String landscapeToken, String traceId);
 
 
 

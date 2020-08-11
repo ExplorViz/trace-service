@@ -1,4 +1,4 @@
-package net.explorviz.persistence;
+package net.explorviz.trace.persistence;
 
 /**
  * Thrown if a record could not be persisted.

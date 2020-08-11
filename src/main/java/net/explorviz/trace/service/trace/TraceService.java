@@ -1,4 +1,4 @@
-package net.explorviz.service.trace;
+package net.explorviz.trace.service.trace;
 
 import java.time.Instant;
 import java.util.List;

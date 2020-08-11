@@ -1,4 +1,4 @@
-package net.explorviz.persistence.cassandra.mapper;
+package net.explorviz.trace.persistence.cassandra.mapper;
 
 
 import com.datastax.oss.driver.api.core.cql.Row;
@@ -10,14 +10,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.IntStream;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Timestamp;
 import net.explorviz.avro.Trace;
-import net.explorviz.persistence.cassandra.CassandraTest;
-import net.explorviz.persistence.cassandra.DBHelper;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.RandomUtils;
+import net.explorviz.trace.TraceHelper;
+import net.explorviz.trace.persistence.cassandra.CassandraTest;
+import net.explorviz.trace.persistence.cassandra.DBHelper;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,7 @@ class TraceMapperTest extends CassandraTest {
 
   @BeforeEach
   void setUp() {
-    mapper = new TraceMapper(this.db.getCodecRegistry());
+    mapper = new TraceMapper(this.db);
   }
 
 
@@ -55,17 +56,18 @@ class TraceMapperTest extends CassandraTest {
     String traceId = ((DefaultLiteral<String>) map.get(DBHelper.COL_TRACE_ID)).getValue();
     Timestamp startTime = ((DefaultLiteral<Timestamp>) map.get(DBHelper.COL_START_TIME)).getValue();
     Timestamp endTime = ((DefaultLiteral<Timestamp>) map.get(DBHelper.COL_END_TIME)).getValue();
-    List<SpanDynamic> spans =
-        ((DefaultLiteral<List<SpanDynamic>>) map.get(DBHelper.COL_SPANS)).getValue();
+    Set<SpanDynamic> spans =
+        ((DefaultLiteral<Set<SpanDynamic>>) map.get(DBHelper.COL_SPANS)).getValue();
 
     Row row = Mockito.mock(Row.class);
     Mockito.when(row.getString(DBHelper.COL_TOKEN)).thenReturn(token);
     Mockito.when(row.getString(DBHelper.COL_TRACE_ID)).thenReturn(traceId);
     Mockito.when(row.get(DBHelper.COL_START_TIME, Timestamp.class)).thenReturn(startTime);
     Mockito.when(row.get(DBHelper.COL_END_TIME, Timestamp.class)).thenReturn(endTime);
-    Mockito.when(row.getList(DBHelper.COL_SPANS, SpanDynamic.class)).thenReturn(spans);
+    Mockito.when(row.getSet(DBHelper.COL_SPANS, SpanDynamic.class)).thenReturn(spans);
 
     Trace got = mapper.fromRow(row);
+
     Assertions.assertEquals(trace, got, "Trace mapping failed");
 
   }
@@ -75,7 +77,7 @@ class TraceMapperTest extends CassandraTest {
 
     // Create list of randomSpans with completely random data
     List<SpanDynamic> randomSpans = new ArrayList<>();
-    IntStream.range(0, 20).forEach(i -> randomSpans.add(randomSpan()));
+    IntStream.range(0, 20).forEach(i -> randomSpans.add(TraceHelper.randomSpan()));
 
     Instant iStart = Instant.now();
     Instant iEnd = iStart.plus(5, ChronoUnit.SECONDS).plus(123, ChronoUnit.NANOS);
@@ -95,32 +97,23 @@ class TraceMapperTest extends CassandraTest {
     String traceId = ((DefaultLiteral<String>) map.get(DBHelper.COL_TRACE_ID)).getValue();
     Timestamp startTime = ((DefaultLiteral<Timestamp>) map.get(DBHelper.COL_START_TIME)).getValue();
     Timestamp endTime = ((DefaultLiteral<Timestamp>) map.get(DBHelper.COL_END_TIME)).getValue();
-    List<SpanDynamic> spans =
-        ((DefaultLiteral<List<SpanDynamic>>) map.get(DBHelper.COL_SPANS)).getValue();
+    Set<SpanDynamic> spans =
+        ((DefaultLiteral<Set<SpanDynamic>>) map.get(DBHelper.COL_SPANS)).getValue();
 
     Row row = Mockito.mock(Row.class);
     Mockito.when(row.getString(DBHelper.COL_TOKEN)).thenReturn(token);
     Mockito.when(row.getString(DBHelper.COL_TRACE_ID)).thenReturn(traceId);
     Mockito.when(row.get(DBHelper.COL_START_TIME, Timestamp.class)).thenReturn(startTime);
     Mockito.when(row.get(DBHelper.COL_END_TIME, Timestamp.class)).thenReturn(endTime);
-    Mockito.when(row.getList(DBHelper.COL_SPANS, SpanDynamic.class)).thenReturn(spans);
+    Mockito.when(row.getSet(DBHelper.COL_SPANS, SpanDynamic.class)).thenReturn(spans);
 
     Trace got = mapper.fromRow(row);
+    trace.getSpanList().sort((i,j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
+    got.getSpanList().sort((i,j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
     Assertions.assertEquals(trace, got, "Trace mapping failed");
 
   }
 
-  private SpanDynamic randomSpan() {
 
-    return SpanDynamic.newBuilder()
-        .setLandscapeToken(RandomStringUtils.random(32, true, true))
-        .setStartTime(new Timestamp(RandomUtils.nextLong(), RandomUtils.nextInt()))
-        .setEndTime(new Timestamp(RandomUtils.nextLong(), RandomUtils.nextInt()))
-        .setTraceId(RandomStringUtils.random(6, true, true))
-        .setParentSpanId(RandomStringUtils.random(8, true, true))
-        .setSpanId(RandomStringUtils.random(8, true, true))
-        .setHashCode(RandomStringUtils.random(256, true, true))
-        .build();
-  }
 
 }

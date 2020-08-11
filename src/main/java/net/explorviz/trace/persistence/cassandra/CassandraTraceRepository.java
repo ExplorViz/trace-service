@@ -1,4 +1,4 @@
-package net.explorviz.persistence.cassandra;
+package net.explorviz.trace.persistence.cassandra;
 
 import com.datastax.oss.driver.api.core.AllNodesFailedException;
 import com.datastax.oss.driver.api.core.cql.SimpleStatement;
@@ -7,11 +7,13 @@ import com.datastax.oss.driver.api.core.servererrors.QueryValidationException;
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder;
 import com.datastax.oss.driver.api.querybuilder.term.Term;
 import java.util.Map;
+import java.util.Optional;
 import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 import net.explorviz.avro.Trace;
-import net.explorviz.persistence.PersistingException;
-import net.explorviz.persistence.TraceRepository;
-import net.explorviz.persistence.cassandra.mapper.ValueMapper;
+import net.explorviz.trace.persistence.PersistingException;
+import net.explorviz.trace.persistence.TraceRepository;
+import net.explorviz.trace.persistence.cassandra.mapper.ValueMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +33,7 @@ public class CassandraTraceRepository implements TraceRepository {
    *
    * @param db the backing Casandra db
    */
+  @Inject
   public CassandraTraceRepository(final DBHelper db, final ValueMapper<Trace> mapper) {
     this.db = db;
     db.initialize();
@@ -41,6 +44,9 @@ public class CassandraTraceRepository implements TraceRepository {
 
   @Override
   public void insert(final Trace item) throws PersistingException {
+
+
+
     final Map<String, Term> values = this.mapper.toMap(item);
     final SimpleStatement insertStmt =
         QueryBuilder.insertInto(DBHelper.KEYSPACE_NAME, DBHelper.TRACES_TABLE_NAME)
@@ -68,5 +74,11 @@ public class CassandraTraceRepository implements TraceRepository {
   public void update(final Trace trace) throws PersistingException {
 
   }
+
+  @Override
+  public Optional<Trace> getTrace(final String landscapeToken, final String traceId) {
+    return Optional.empty();
+  }
+
 
 }

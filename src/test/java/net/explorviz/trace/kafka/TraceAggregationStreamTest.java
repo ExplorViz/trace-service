@@ -99,7 +99,8 @@ class TraceAggregationStreamTest {
         .setStartTime(new Timestamp(start.getEpochSecond(), start.getNano()))
         .setEndTime(new Timestamp(end.getEpochSecond(), end.getNano()))
         .setHashCode("hash")
-        .setLandscapeToken(token)
+        .setParentSpanId(token)
+        .setLandscapeToken("adasod")
         .build();
     SpanDynamic s2 = SpanDynamic.newBuilder(s1)
         .setSpanId("span2").setParentSpanId("span1").build();

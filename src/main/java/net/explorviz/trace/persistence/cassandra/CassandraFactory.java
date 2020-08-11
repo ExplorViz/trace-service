@@ -1,4 +1,4 @@
-package net.explorviz.persistence.cassandra;
+package net.explorviz.trace.persistence.cassandra;
 
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.CqlSessionBuilder;

@@ -1,4 +1,4 @@
-package net.explorviz.kafka;
+package net.explorviz.trace.kafka;
 
 import java.time.Instant;
 import net.explorviz.avro.SpanDynamic;
