@@ -14,8 +14,8 @@ import com.datastax.oss.driver.api.querybuilder.schema.CreateTable;
 import com.datastax.oss.driver.api.querybuilder.schema.CreateType;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import net.explorviz.trace.persistence.cassandra.mapper.SpanCodec;
-import net.explorviz.trace.persistence.cassandra.mapper.TimestampCodec;
+import net.explorviz.trace.persistence.cassandra.codecs.SpanCodec;
+import net.explorviz.trace.persistence.cassandra.codecs.TimestampCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +23,11 @@ import org.slf4j.LoggerFactory;
  * Wrapper class for accessing the Cassandra database. Next to providing access to the CqlSession,
  * this class contain utility methods to initialize the database. This database's state by default
  * is uninitialized. To create the necessary keyspace and tables, call {@link #initialize()} prior
- * to using it.
+ * to using it. In essence this creates the the table `spans` with the following schema
+ *
+ * <pre>
+ *   LandscapeToken* | Timestamp' | TraceId' | Set<SpanDynamic>
+ * </pre>
  */
 @Singleton
 public class DBHelper {
@@ -31,7 +35,7 @@ public class DBHelper {
   private static final Logger LOGGER = LoggerFactory.getLogger(DBHelper.class);
 
   public static final String KEYSPACE_NAME = "explorviz";
-  public static final String TRACES_TABLE_NAME = "traces";
+  public static final String TABLE_SPANS = "spans";
 
 
   public static final String TYPE_TIMESTAMP = "ctimestamp";
@@ -44,7 +48,7 @@ public class DBHelper {
   public static final String COL_TIMESTAMP_SECONDS = "seconds";
   public static final String COL_TIMESTAMP_NANO = "nano_adjust";
 
-  public static final String COL_START_TIME = "start_time";
+  public static final String COL_TIMESTAMP = "start_time";
   public static final String COL_END_TIME = "end_time";
 
   public static final String COL_SPAN_ID = "span_id";
@@ -75,11 +79,11 @@ public class DBHelper {
 
   /**
    * Initializes the database by creating necessary schemata. This is a no-op if the database is
-   * already initalized;
+   * already initialized.
    */
   public void initialize() {
     this.createKeySpace();
-    this.createLandscapeRecordTable();
+    this.createSpansTable();
     this.registerCodecs();
   }
 
@@ -100,10 +104,11 @@ public class DBHelper {
   }
 
   /**
-   * Creates the table "traces" which holds all {@link net.explorviz.avro.Trace} objects. No-op if this
+   * Creates the table "traces" which holds all {@link net.explorviz.avro.Trace} objects. No-op if
+   * this
    * table already exists.
    */
-  private void createLandscapeRecordTable() {
+  private void createSpansTable() {
 
 
 
@@ -126,20 +131,19 @@ public class DBHelper {
 
 
     final CreateTable createTraceTable = SchemaBuilder
-        .createTable(KEYSPACE_NAME, TRACES_TABLE_NAME)
+        .createTable(KEYSPACE_NAME, TABLE_SPANS)
         .ifNotExists()
         .withPartitionKey(COL_TOKEN, DataTypes.TEXT)
         .withClusteringColumn(COL_TRACE_ID, DataTypes.TEXT)
-        .withClusteringColumn(COL_START_TIME, SchemaBuilder.udt(TYPE_TIMESTAMP, true))
-        .withClusteringColumn(COL_END_TIME, SchemaBuilder.udt(TYPE_TIMESTAMP, true))
+        .withColumn(COL_TIMESTAMP, DataTypes.TIMESTAMP)
         .withColumn(COL_SPANS, DataTypes.setOf(SchemaBuilder.udt(TYPE_SPAN, true), false));
 
 
     // Create index on start time for efficient range queries
     final CreateIndex createTSIndex = SchemaBuilder.createIndex("timestamp_index")
         .ifNotExists()
-        .onTable(KEYSPACE_NAME, TRACES_TABLE_NAME)
-        .andColumn(COL_START_TIME);
+        .onTable(KEYSPACE_NAME, TABLE_SPANS)
+        .andColumn(COL_TIMESTAMP);
 
 
     this.dbSession.execute(createTimestampUdt.asCql());

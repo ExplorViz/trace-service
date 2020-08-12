@@ -1,27 +1,22 @@
 package net.explorviz.trace.persistence;
 
 import java.util.Optional;
+import java.util.Set;
+import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
 
 /**
  * Manages (usually persistent) access to a collection of {@link Trace}s.
  */
-public interface TraceRepository {
+public interface SpanRepository {
 
   /**
-   * Inserts a new trace.
+   * Inserts a new span.
    *
-   * @param trace the trace
+   * @param span the span to save
    */
-  void insert(Trace trace) throws PersistingException;
+  void insert(SpanDynamic span) throws PersistingException;
 
-  /**
-   * Updates a trace that already exists in the DB.
-   *
-   * @param trace the trace to update
-   * @throws PersistingException if updating failed
-   */
-  void update(Trace trace) throws PersistingException;
 
   /**
    * Finds a trace for a given a landscape token and trace id.
@@ -29,7 +24,7 @@ public interface TraceRepository {
    * @param traceId the trace id
    * @return an optional containing the trace if existing and is empty otherwise
    */
-  Optional<Trace> getTrace(String landscapeToken, String traceId);
+  Optional<Set<SpanDynamic>> getSpans(String landscapeToken, String traceId);
 
 
 

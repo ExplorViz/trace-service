@@ -12,7 +12,8 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
-import net.explorviz.trace.service.TraceAggregator;
+import net.explorviz.trace.persistence.PersistingException;
+import net.explorviz.trace.persistence.SpanRepository;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -23,10 +24,10 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Contains a Kafka Streams topology that ingests {@link SpanDynamic} from a topic and aggregates
@@ -35,29 +36,33 @@ import org.apache.kafka.streams.state.KeyValueStore;
  * The resulting traces are persisted in a cassandra db.
  */
 @ApplicationScoped
-public class TraceAggregationStream {
+public class SpanPersistingStream {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(SpanPersistingStream.class);
 
   private final Properties streamsConfig = new Properties();
-
   private final Topology topology;
 
   private final SchemaRegistryClient registryClient;
   private final KafkaConfig config;
-  private final Materialized<String, Trace, KeyValueStore<Bytes, byte[]>> traceStore;
 
   private KafkaStreams streams;
 
+  private SpanRepository repository;
+
   @Inject
-  public TraceAggregationStream(final SchemaRegistryClient schemaRegistryClient,
-                                final KafkaConfig config) {
+  public SpanPersistingStream(final SchemaRegistryClient schemaRegistryClient,
+                              final KafkaConfig config,
+                              final SpanRepository repository) {
 
     this.registryClient = schemaRegistryClient;
     this.config = config;
 
     assert config.getOutTopic() != null;
-    this.traceStore = createTraceStore();
     this.topology = this.buildTopology();
     this.setupStreamsConfig();
+
+    this.repository = repository;
 
   }
 
@@ -87,20 +92,16 @@ public class TraceAggregationStream {
     final KStream<String, SpanDynamic> spanStream = builder.stream(this.config.getInTopic(),
         Consumed.with(Serdes.String(), this.getAvroSerde(false)));
 
-    // Aggregate Spans to traces and store them in a state store "traces"
-    TraceAggregator aggregator = new TraceAggregator();
-    final KTable<String, Trace> traceTable =
-        spanStream.groupByKey().aggregate(Trace::new,
-            (key, value, aggregate) -> aggregator.aggregate(key, aggregate, value),
-            this.traceStore);
-
-    // Stream the changelog to index, remove span list to avoid unnecessary data transfer
-    traceTable
-        .toStream()
-        .to(this.config.getOutTopic(),
-            Produced.with(Serdes.String(), this.getAvroSerde(false)));
-
-
+    spanStream.foreach((k,s) -> {
+      try {
+        repository.insert(s);
+      } catch (PersistingException e) {
+        // TODO: How to handle these spans? Enqueue somewhere for retries?
+        if (LOGGER.isErrorEnabled()) {
+          LOGGER.error("A span was not persisted: {0}", e);
+        }
+      }
+    });
 
     return builder.build();
   }

@@ -1,13 +1,10 @@
-package net.explorviz.trace.persistence.cassandra.mapper;
+package net.explorviz.trace.persistence.cassandra.codecs;
 
-import com.datastax.oss.driver.api.core.ProtocolVersion;
 import com.datastax.oss.driver.api.core.data.UdtValue;
 import com.datastax.oss.driver.api.core.type.UserDefinedType;
 import com.datastax.oss.driver.api.core.type.codec.MappingCodec;
 import com.datastax.oss.driver.api.core.type.codec.TypeCodec;
 import com.datastax.oss.driver.api.core.type.reflect.GenericType;
-import com.datastax.oss.driver.api.querybuilder.QueryBuilder;
-import java.nio.ByteBuffer;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Timestamp;
 import net.explorviz.trace.persistence.cassandra.DBHelper;

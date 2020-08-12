@@ -1,4 +1,4 @@
-package net.explorviz.trace.persistence.cassandra.mapper;
+package net.explorviz.trace.persistence.cassandra.codecs;
 
 import com.datastax.oss.driver.api.core.data.UdtValue;
 import com.datastax.oss.driver.api.core.type.UserDefinedType;
