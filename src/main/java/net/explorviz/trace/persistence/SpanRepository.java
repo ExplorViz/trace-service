@@ -1,5 +1,7 @@
 package net.explorviz.trace.persistence;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import net.explorviz.avro.SpanDynamic;
@@ -27,6 +29,14 @@ public interface SpanRepository {
   Optional<Set<SpanDynamic>> getSpans(String landscapeToken, String traceId);
 
 
+  /**
+   * Returns all traces for a specific landscape between a given range
+   * @param landscapeToken the landscape token
+   * @param from the (inclusive) time of the earliest trace
+   * @param to the (inclusive) time of the latest trace
+   * @return
+   */
+  List<Set<SpanDynamic>> getAllInRange(String landscapeToken, Instant from, Instant to);
 
 
 }

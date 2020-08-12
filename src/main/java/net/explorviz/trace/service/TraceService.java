@@ -22,12 +22,4 @@ public interface TraceService {
   }
   List<Trace> getBetween(String landscapeToken, long millisFrom, long millisTo);
 
-
-  /**
-   * Persist a trace. This may be an update to an already existing trace.
-   * @param trace the trace to persist
-   */
-  void upsert(Trace trace);
-
-
 }

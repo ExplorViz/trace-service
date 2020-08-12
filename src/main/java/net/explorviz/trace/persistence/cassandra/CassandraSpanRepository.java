@@ -1,14 +1,21 @@
 package net.explorviz.trace.persistence.cassandra;
 
 import com.datastax.oss.driver.api.core.AllNodesFailedException;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.core.cql.SimpleStatement;
 import com.datastax.oss.driver.api.core.servererrors.QueryExecutionException;
 import com.datastax.oss.driver.api.core.servererrors.QueryValidationException;
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.management.Query;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
 import net.explorviz.trace.persistence.PersistingException;
@@ -112,7 +119,32 @@ public class CassandraSpanRepository implements SpanRepository {
 
   @Override
   public Optional<Set<SpanDynamic>> getSpans(final String landscapeToken, final String traceId) {
-    return Optional.empty();
+
+    SimpleStatement findStmt = QueryBuilder.selectFrom(DBHelper.KEYSPACE_NAME, DBHelper.TABLE_SPANS)
+        .column(DBHelper.COL_SPANS)
+        .whereColumn(DBHelper.COL_TOKEN).isEqualTo(QueryBuilder.literal(landscapeToken))
+        .whereColumn(DBHelper.COL_TRACE_ID).isEqualTo(QueryBuilder.literal(traceId))
+        .build();
+    Row result = this.db.getSession().execute(findStmt).one();
+    if (result == null) {
+      return Optional.empty();
+    } else {
+      return Optional.ofNullable(result.getSet(DBHelper.COL_SPANS, SpanDynamic.class));
+    }
+  }
+
+  @Override
+  public List<Set<SpanDynamic>> getAllInRange(String landscapeToken, final Instant from, final Instant to) {
+    SimpleStatement findAllStmt = QueryBuilder.selectFrom(DBHelper.KEYSPACE_NAME, DBHelper.TABLE_SPANS)
+        .column(DBHelper.COL_SPANS)
+        .whereColumn(DBHelper.COL_TOKEN).isEqualTo(QueryBuilder.literal(landscapeToken))
+        .whereColumn(DBHelper.COL_TIMESTAMP).isGreaterThanOrEqualTo(QueryBuilder.literal(from))
+        .whereColumn(DBHelper.COL_TIMESTAMP).isLessThanOrEqualTo(QueryBuilder.literal(to))
+        .build();
+    ResultSet results = this.db.getSession().execute(findAllStmt);
+    List<Set<SpanDynamic>> traces = new ArrayList<>();
+    results.forEach(r -> traces.add(r.getSet(DBHelper.COL_SPANS, SpanDynamic.class)));
+    return traces;
   }
 
 

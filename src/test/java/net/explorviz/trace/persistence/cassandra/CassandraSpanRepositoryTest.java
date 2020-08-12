@@ -4,6 +4,7 @@ import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
@@ -72,11 +73,11 @@ class CassandraSpanRepositoryTest extends CassandraTest {
     Set<SpanDynamic> got = results.get(0).getSet(DBHelper.COL_SPANS, SpanDynamic.class);
 
     List<SpanDynamic> expected = new ArrayList<>(testTrace.getSpanList());
-    expected.sort((i,j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
+    expected.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
     expected.forEach(s -> s.setLandscapeToken("")); // Not persisted, do not compare
 
     List<SpanDynamic> gotList = new ArrayList<>(got);
-    gotList.sort((i,j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
+    gotList.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
 
 
     Assertions.assertEquals(expected, gotList);
@@ -87,7 +88,7 @@ class CassandraSpanRepositoryTest extends CassandraTest {
     final int spansPerTraces = 20;
     final int traceAmount = 20;
 
-    for (int i = 0; i<traceAmount; i++) {
+    for (int i = 0; i < traceAmount; i++) {
       Trace testTrace = TraceHelper.randomTrace(spansPerTraces);
       for (SpanDynamic s : testTrace.getSpanList()) {
         repo.insert(s);
@@ -103,12 +104,30 @@ class CassandraSpanRepositoryTest extends CassandraTest {
     Assertions.assertEquals(traceAmount, results.size());
 
     // Each trace should have #spansPerTraces spans
-    for (Row r: results) {
+    for (Row r : results) {
       Set<SpanDynamic> spans = r.getSet(DBHelper.COL_SPANS, SpanDynamic.class);
       Assertions.assertEquals(spansPerTraces, spans.size());
     }
+  }
+
+  @Test
+  void findSpans() throws PersistingException {
+    final int spansPerTraces = 20;
+
+    Trace testTrace = TraceHelper.randomTrace(spansPerTraces);
+    for (SpanDynamic s : testTrace.getSpanList()) {
+      repo.insert(s);
+    }
+
+    Set<SpanDynamic> got =
+        repo.getSpans(testTrace.getLandscapeToken(), testTrace.getTraceId()).orElseThrow();
 
 
-
+    List<SpanDynamic> expected = testTrace.getSpanList();
+    expected.forEach(s -> s.setLandscapeToken(""));
+    expected.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
+    List<SpanDynamic> gotList = new ArrayList<>(got);
+    gotList.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
+    Assertions.assertEquals(expected, gotList);
   }
 }
