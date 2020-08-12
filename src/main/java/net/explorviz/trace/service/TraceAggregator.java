@@ -59,8 +59,8 @@ public class TraceAggregator {
       return initTrace(traceId, aggregate, newSpan);
     }
 
-    // Add the span to the trace at the correct position
-    insertSorted(aggregate.getSpanList(), newSpan);
+    // Add the span to the trace
+    aggregate.getSpanList().add(newSpan);
     // Depending on the position the span was inserted, the start or end time must be adjusted
     if (isBefore(newSpan.getStartTime(), aggregate.getStartTime())) {
       // Span is the current earliest in the trace
@@ -71,23 +71,6 @@ public class TraceAggregator {
     }
 
     return aggregate;
-  }
-
-
-
-  /**
-   * Inserts a span to the span list such that spans are sorted by start time
-   * @param spanList the list to add the span to
-   * @param insertMe the span to insert
-   * @return the position the span was inserted to
-   */
-  private int insertSorted(List<SpanDynamic> spanList, SpanDynamic insertMe) {
-    int i = 0;
-    while (i < spanList.size() && isBefore(spanList.get(i).getStartTime(), insertMe.getEndTime())) {
-      i++;
-    }
-    spanList.add(i, insertMe);
-    return i;
   }
 
 
