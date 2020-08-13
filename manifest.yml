@@ -18,3 +18,21 @@ spec:
       - name: explorviz-trace-service
         image: explorviz/trace-service-jvm:latest
         imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: explorviz-trace-service
+  labels:
+    app: explorviz-trace-service
+spec:
+  type: NodePort
+  ports:
+    - name: explorviz-trace-service
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+      nodePort: 32681
+  selector:
+    app: explorviz-trace-service
+
