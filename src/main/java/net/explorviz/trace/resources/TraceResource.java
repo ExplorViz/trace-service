@@ -1,0 +1,65 @@
+package net.explorviz.trace.resources;
+
+import java.time.Instant;
+import java.util.Collection;
+import java.util.Optional;
+import javax.inject.Inject;
+import javax.ws.rs.GET;
+import javax.ws.rs.NotFoundException;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.QueryParam;
+import net.explorviz.avro.Trace;
+import net.explorviz.trace.service.TraceService;
+
+@Path("/v2/landscape")
+public class TraceResource {
+
+
+  private final TraceService traceService;
+
+  @Inject
+  public TraceResource(final TraceService traceService) {
+    this.traceService = traceService;
+  }
+
+  @GET
+  @Path("/{token}/dynamic/traces/{traceid}")
+  public Trace getTrace(@PathParam("token") String landscapeToken,
+                        @PathParam("traceid") String traceId) {
+
+    Optional<Trace> trace = traceService.getById(landscapeToken, traceId);
+    if (trace.isPresent()) {
+      return trace.get();
+    } else {
+      throw new NotFoundException();
+    }
+  }
+
+  @GET
+  @Path("/{token}/dynamic/traces")
+  public Collection<Trace> getTraces(@PathParam("token") String landscapeToken,
+                                     @QueryParam("from") Long fromMs,
+                                     @QueryParam("to") Long toMs) {
+
+    Instant from = Instant.MIN;
+    Instant to = Instant.now();
+    int c = (fromMs == null ? 0 : 1) + (toMs == null ? 0 : 2);
+    switch (c) {
+      case 1: // from is given
+        from = Instant.ofEpochMilli(fromMs);
+        break;
+      case 2: // to is given
+        to = Instant.ofEpochMilli(toMs);
+        break;
+      case 3: // both given
+        from = Instant.ofEpochMilli(fromMs);
+        to = Instant.ofEpochMilli(toMs);
+        break;
+    }
+
+    Collection<Trace> traces = traceService.getBetween(landscapeToken, from, to);
+    return traces;
+  }
+
+}
