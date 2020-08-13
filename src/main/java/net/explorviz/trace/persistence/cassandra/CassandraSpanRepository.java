@@ -90,10 +90,11 @@ public class CassandraSpanRepository implements SpanRepository {
    */
   private void createNew(SpanDynamic span) {
 
+    Instant timestamp = TimestampHelper.toInstant(span.getStartTime());
     final SimpleStatement insertStmt =
         QueryBuilder.insertInto(DBHelper.KEYSPACE_NAME, DBHelper.TABLE_SPANS)
             .value(DBHelper.COL_TOKEN, QueryBuilder.literal(span.getLandscapeToken()))
-            .value(DBHelper.COL_TIMESTAMP, QueryBuilder.toTimestamp(QueryBuilder.now()))
+            .value(DBHelper.COL_TIMESTAMP, QueryBuilder.toTimestamp(QueryBuilder.literal(timestamp)))
             .value(DBHelper.COL_TRACE_ID, QueryBuilder.literal(span.getTraceId()))
             .value(DBHelper.COL_SPANS, QueryBuilder.literal(Set.of(span), db.getCodecRegistry()))
             .build();

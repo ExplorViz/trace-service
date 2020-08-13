@@ -13,12 +13,15 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import net.explorviz.avro.Trace;
 import net.explorviz.trace.service.TraceService;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.io.EncoderFactory;
 
 @Path("/v2/landscapes")
 public class TraceResource {
 
 
   private final TraceService traceService;
+  private final static long MIN_SECONDS = 1577836800; // 01.01.2020 00:00
 
   @Inject
   public TraceResource(final TraceService traceService) {
@@ -46,7 +49,7 @@ public class TraceResource {
                                      @QueryParam("from") Long fromMs,
                                      @QueryParam("to") Long toMs) {
 
-    Instant from = Instant.MIN;
+    Instant from = Instant.ofEpochSecond(MIN_SECONDS, 0);
     Instant to = Instant.now();
     int c = (fromMs == null ? 0 : 1) + (toMs == null ? 0 : 2);
     switch (c) {
