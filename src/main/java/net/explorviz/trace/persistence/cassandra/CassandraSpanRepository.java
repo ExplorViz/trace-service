@@ -9,6 +9,7 @@ import com.datastax.oss.driver.api.core.servererrors.QueryValidationException;
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,7 @@ import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
 import net.explorviz.trace.persistence.PersistingException;
 import net.explorviz.trace.persistence.SpanRepository;
+import net.explorviz.trace.service.TimestampHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,6 +89,7 @@ public class CassandraSpanRepository implements SpanRepository {
    * @param span the span to add
    */
   private void createNew(SpanDynamic span) {
+
     final SimpleStatement insertStmt =
         QueryBuilder.insertInto(DBHelper.KEYSPACE_NAME, DBHelper.TABLE_SPANS)
             .value(DBHelper.COL_TOKEN, QueryBuilder.literal(span.getLandscapeToken()))
@@ -118,7 +121,7 @@ public class CassandraSpanRepository implements SpanRepository {
   }
 
   @Override
-  public Optional<Set<SpanDynamic>> getSpans(final String landscapeToken, final String traceId) {
+  public Optional<Collection<SpanDynamic>> getSpans(final String landscapeToken, final String traceId) {
 
     SimpleStatement findStmt = QueryBuilder.selectFrom(DBHelper.KEYSPACE_NAME, DBHelper.TABLE_SPANS)
         .column(DBHelper.COL_SPANS)

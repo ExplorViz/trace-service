@@ -3,6 +3,7 @@ package net.explorviz.trace.persistence.cassandra;
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -119,15 +120,14 @@ class CassandraSpanRepositoryTest extends CassandraTest {
       repo.insert(s);
     }
 
-    Set<SpanDynamic> got =
-        repo.getSpans(testTrace.getLandscapeToken(), testTrace.getTraceId()).orElseThrow();
+    List<SpanDynamic> got =
+        new ArrayList<>(repo.getSpans(testTrace.getLandscapeToken(), testTrace.getTraceId()).orElseThrow());
 
 
     List<SpanDynamic> expected = testTrace.getSpanList();
     expected.forEach(s -> s.setLandscapeToken(""));
     expected.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
-    List<SpanDynamic> gotList = new ArrayList<>(got);
-    gotList.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
-    Assertions.assertEquals(expected, gotList);
+    got.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
+    Assertions.assertEquals(expected, got);
   }
 }

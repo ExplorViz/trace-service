@@ -1,6 +1,7 @@
 package net.explorviz.trace.persistence;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -26,7 +27,7 @@ public interface SpanRepository {
    * @param traceId the trace id
    * @return an optional containing the trace if existing and is empty otherwise
    */
-  Optional<Set<SpanDynamic>> getSpans(String landscapeToken, String traceId);
+  Optional<Collection<SpanDynamic>> getSpans(String landscapeToken, String traceId);
 
 
   /**
