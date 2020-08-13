@@ -8,11 +8,13 @@ import javax.ws.rs.GET;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import net.explorviz.avro.Trace;
 import net.explorviz.trace.service.TraceService;
 
-@Path("/v2/landscape")
+@Path("/v2/landscapes")
 public class TraceResource {
 
 
@@ -24,7 +26,8 @@ public class TraceResource {
   }
 
   @GET
-  @Path("/{token}/dynamic/traces/{traceid}")
+  @Path("/{token}/dynamic/{traceid}")
+  @Produces(MediaType.APPLICATION_JSON)
   public Trace getTrace(@PathParam("token") String landscapeToken,
                         @PathParam("traceid") String traceId) {
 
@@ -37,7 +40,8 @@ public class TraceResource {
   }
 
   @GET
-  @Path("/{token}/dynamic/traces")
+  @Path("/{token}/dynamic")
+  @Produces(MediaType.APPLICATION_JSON)
   public Collection<Trace> getTraces(@PathParam("token") String landscapeToken,
                                      @QueryParam("from") Long fromMs,
                                      @QueryParam("to") Long toMs) {
