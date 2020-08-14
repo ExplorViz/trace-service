@@ -14,6 +14,7 @@ import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
 import net.explorviz.trace.persistence.PersistingException;
 import net.explorviz.trace.persistence.SpanRepository;
+import net.explorviz.trace.util.PerformanceLogger;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -87,6 +88,9 @@ public class SpanPersistingStream {
   }
 
   private Topology buildTopology() {
+    PerformanceLogger pfLogger = PerformanceLogger.newOperationPerformanceLogger(
+        LOGGER,100,"Saved {} spans in {}ms");
+
     final StreamsBuilder builder = new StreamsBuilder();
 
     final KStream<String, SpanDynamic> spanStream = builder.stream(this.config.getInTopic(),
@@ -95,6 +99,7 @@ public class SpanPersistingStream {
     spanStream.foreach((k,s) -> {
       try {
         repository.insert(s);
+        pfLogger.logOperation();
       } catch (PersistingException e) {
         // TODO: How to handle these spans? Enqueue somewhere for retries?
         if (LOGGER.isErrorEnabled()) {
