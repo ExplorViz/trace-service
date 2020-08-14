@@ -144,6 +144,7 @@ public class DBHelper {
         .ifNotExists()
         .onTable(KEYSPACE_NAME, TABLE_SPANS)
         .andColumn(COL_TIMESTAMP);
+    
 
 
     this.dbSession.execute(createTimestampUdt.asCql());
