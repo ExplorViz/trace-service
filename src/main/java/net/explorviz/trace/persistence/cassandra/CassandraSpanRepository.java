@@ -146,6 +146,7 @@ public class CassandraSpanRepository implements SpanRepository {
             .whereColumn(DBHelper.COL_TOKEN).isEqualTo(QueryBuilder.literal(landscapeToken))
             .whereColumn(DBHelper.COL_TIMESTAMP).isGreaterThanOrEqualTo(QueryBuilder.literal(from))
             .whereColumn(DBHelper.COL_TIMESTAMP).isLessThanOrEqualTo(QueryBuilder.literal(to))
+            .allowFiltering()
             .build();
     ResultSet queryResults = this.db.getSession().execute(findAllStmt);
     ExecutionInfo exInfo = queryResults.getExecutionInfo();
