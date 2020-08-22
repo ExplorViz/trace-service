@@ -1,10 +1,14 @@
 package net.explorviz.trace.kafka;
 
+import static net.explorviz.trace.kafka.SpanPersistingStream.SUPPRESSION_TIME_MS;
+
 import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.quarkus.test.junit.QuarkusTest;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,6 +32,7 @@ import org.apache.kafka.streams.TestOutputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
+import org.apache.tinkerpop.gremlin.structure.T;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -97,49 +102,50 @@ class SpanPersistingStreamTest {
   @Test
   void testSingleSpan() throws PersistingException {
 
-    List<SpanDynamic> mockSpanDB = new ArrayList<>();
+    List<Trace> mockSpanDB = new ArrayList<>();
     Mockito.doAnswer(i -> {
-      SpanDynamic inserted = i.getArgumentAt(0, SpanDynamic.class);
+      Trace inserted = i.getArgumentAt(0, Trace.class);
       mockSpanDB.add(inserted);
       return null;
-    }).when(mockRepo).insert(Mockito.any());
+    }).when(mockRepo).saveTrace(Mockito.any());
 
     SpanDynamic testSpan = TraceHelper.randomSpan();
     inputTopic.pipeInput(testSpan.getTraceId(), testSpan);
 
+
+
     Assertions.assertEquals(1, mockSpanDB.size());
-    Assertions.assertEquals(testSpan, mockSpanDB.get(0));
+    Assertions.assertEquals(testSpan, mockSpanDB.get(0).getSpanList().get(0));
 
   }
 
   @Test
   void testSingleTrace() throws PersistingException {
 
-    Map<String, Set<SpanDynamic>> mockSpanDB = new HashMap<>();
+    Map<String, Trace> mockSpanDB = new HashMap<>();
     Mockito.doAnswer(i -> {
-      SpanDynamic inserted = i.getArgumentAt(0, SpanDynamic.class);
-      String key = inserted.getLandscapeToken() + "|" + inserted.getTraceId();
-      Set<SpanDynamic> spans = mockSpanDB.get(key);
-      if (spans != null) {
-        spans.add(inserted);
-      } else {
-        Set<SpanDynamic> s = new HashSet<>();
-        s.add(inserted);
-        mockSpanDB.put(key, s);
-      }
+      Trace inserted = i.getArgumentAt(0, Trace.class);
+      String key = inserted.getLandscapeToken()+"::"+inserted.getTraceId();
+      System.out.println("SIZE: "+inserted.getSpanList().size());
+      mockSpanDB.put(key, inserted);
       return null;
-    }).when(mockRepo).insert(Mockito.any());
+    }).when(mockRepo).saveTrace(Mockito.any());
 
     int spansPerTrace = 20;
 
     Trace testTrace = TraceHelper.randomTrace(spansPerTrace);
+    // Same timestamp keeps them in the same window
+    Timestamp t = testTrace.getStartTime();
     for (SpanDynamic s: testTrace.getSpanList()) {
+      s.setStartTime(t);
       inputTopic.pipeInput(s.getTraceId(), s);
     }
+    testDriver.advanceWallClockTime(Duration.ofSeconds(2000));
 
-    String k = testTrace.getLandscapeToken() + "|" + testTrace.getTraceId();
+    String k = testTrace.getLandscapeToken() + "::" + testTrace.getTraceId();
     Assertions.assertEquals(1, mockSpanDB.size());
-    Assertions.assertEquals(spansPerTrace, mockSpanDB.get(k).size());
+    System.out.println(mockSpanDB.entrySet().toArray()[0]);
+    Assertions.assertEquals(testTrace.getSpanList().size(), mockSpanDB.get(k).getSpanList().size());
   }
 
   @Test
@@ -175,6 +181,9 @@ class SpanPersistingStreamTest {
     }
 
   }
+
+
+
 
 
 }

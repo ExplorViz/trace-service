@@ -5,6 +5,8 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Properties;
 import javax.enterprise.context.ApplicationScoped;
@@ -14,19 +16,28 @@ import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
 import net.explorviz.trace.persistence.PersistingException;
 import net.explorviz.trace.persistence.SpanRepository;
+import net.explorviz.trace.service.TraceAggregator;
+import net.explorviz.trace.service.TraceReducer;
 import net.explorviz.trace.util.PerformanceLogger;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.Serialized;
+import org.apache.kafka.streams.kstream.Suppressed;
+import org.apache.kafka.streams.kstream.TimeWindows;
+import org.apache.kafka.streams.kstream.Windowed;
+import org.apache.kafka.streams.kstream.WindowedSerdes;
+import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +49,9 @@ import org.slf4j.LoggerFactory;
  */
 @ApplicationScoped
 public class SpanPersistingStream {
+
+  public static final long WINDOW_SIZE_MS = 10_000;
+  public static final long SUPPRESSION_TIME_MS = 2_000;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SpanPersistingStream.class);
 
@@ -89,31 +103,56 @@ public class SpanPersistingStream {
 
   private Topology buildTopology() {
     PerformanceLogger pfLogger = PerformanceLogger.newOperationPerformanceLogger(
-        LOGGER,100,"Saved {} spans in {}ms");
+        LOGGER, 100, "Saved {} spans in {}ms");
 
     final StreamsBuilder builder = new StreamsBuilder();
 
     final KStream<String, SpanDynamic> spanStream = builder.stream(this.config.getInTopic(),
         Consumed.with(Serdes.String(), this.getAvroSerde(false)));
 
-    spanStream.foreach((k,s) -> {
-      try {
-        repository.insert(s);
-        pfLogger.logOperation();
-      } catch (PersistingException e) {
-        // TODO: How to handle these spans? Enqueue somewhere for retries?
-        if (LOGGER.isErrorEnabled()) {
-          LOGGER.error("A span was not persisted: {0}", e);
-        }
-      }
-    });
+    TimeWindows traceWindow = TimeWindows.of(Duration.of(WINDOW_SIZE_MS, ChronoUnit.MILLIS));
+
+    /*
+     Only emits the (intermediary) aggregated trace if no new spans came in for a given duration
+      or if more than 200 spans were aggregated.
+     */
+    Suppressed<Windowed<String>> timeSuppression = Suppressed
+        .untilTimeLimit(Duration.of(SUPPRESSION_TIME_MS, ChronoUnit.MILLIS), Suppressed.BufferConfig
+            .maxRecords(200));
+
+    TraceAggregator aggregator = new TraceAggregator();
+
+    // Group by landscapeToken::TraceId
+    KTable<Windowed<String>, Trace> traceTable =
+        spanStream.groupBy((k, v) -> v.getLandscapeToken() + "::" + v.getTraceId(),
+            Grouped.with(Serdes.String(), getAvroSerde(false)))
+            .windowedBy(traceWindow)
+            .aggregate(Trace::new,
+                (key, value, aggregate) -> aggregator.aggregate(aggregate, value),
+                Materialized.with(Serdes.String(), this.getAvroSerde(false)))
+            .suppress(timeSuppression);
+
+    KStream<String, Trace> traceStream =
+        traceTable.toStream().selectKey((k, v) -> v.getLandscapeToken() + "::" + k);
+
+    traceTable.queryableStoreName();
+
+
+    TraceReducer reducer = new TraceReducer();
+    traceStream.mapValues(reducer::reduce)
+        .foreach((k, t) -> {
+          try {
+            repository.saveTrace(t);
+            pfLogger.logOperation();
+          } catch (PersistingException e) {
+            // TODO: How to handle these spans? Enqueue somewhere for retries?
+            if (LOGGER.isErrorEnabled()) {
+              LOGGER.error("A span was not persisted: {0}", e);
+            }
+          }
+        });
 
     return builder.build();
-  }
-
-  private Materialized<String, Trace, KeyValueStore<Bytes, byte[]>> createTraceStore() {
-    return Materialized.<String, Trace, KeyValueStore<Bytes, byte[]>>as(KafkaConfig.TRACES_STORE)
-        .withKeySerde(Serdes.String()).withValueSerde(this.getAvroSerde(false));
   }
 
   /**

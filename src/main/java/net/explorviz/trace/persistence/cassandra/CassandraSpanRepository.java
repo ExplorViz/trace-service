@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -71,6 +72,20 @@ public class CassandraSpanRepository implements SpanRepository {
       }
       throw new PersistingException(e);
     }
+  }
+
+  @Override
+  public void saveTrace(final Trace trace) throws PersistingException {
+    long timestamp = TimestampHelper.toInstant(trace.getStartTime()).toEpochMilli();
+    Set<SpanDynamic> spanSet = new HashSet<>(trace.getSpanList());
+    final SimpleStatement insertStmt =
+        QueryBuilder.insertInto(DBHelper.KEYSPACE_NAME, DBHelper.TABLE_SPANS)
+            .value(DBHelper.COL_TOKEN, QueryBuilder.literal(trace.getLandscapeToken()))
+            .value(DBHelper.COL_TIMESTAMP, QueryBuilder.literal(timestamp))
+            .value(DBHelper.COL_TRACE_ID, QueryBuilder.literal(trace.getTraceId()))
+            .value(DBHelper.COL_SPANS, QueryBuilder.literal(spanSet, db.getCodecRegistry()))
+            .build();
+    this.db.getSession().execute(insertStmt);
   }
 
 

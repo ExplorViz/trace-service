@@ -3,7 +3,7 @@ package net.explorviz.trace.persistence;
 /**
  * Thrown if a record could not be persisted.
  */
-public class PersistingException extends Exception {
+public class PersistingException extends RuntimeException {
   public PersistingException() {}
 
   public PersistingException(final String message) {
