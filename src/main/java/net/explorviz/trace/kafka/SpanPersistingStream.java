@@ -31,13 +31,9 @@ import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Produced;
-import org.apache.kafka.streams.kstream.Serialized;
 import org.apache.kafka.streams.kstream.Suppressed;
 import org.apache.kafka.streams.kstream.TimeWindows;
 import org.apache.kafka.streams.kstream.Windowed;
-import org.apache.kafka.streams.kstream.WindowedSerdes;
-import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +47,7 @@ import org.slf4j.LoggerFactory;
 public class SpanPersistingStream {
 
   public static final long WINDOW_SIZE_MS = 10_000;
+  public static final long GRACE_MS = 2_000;
   public static final long SUPPRESSION_TIME_MS = 2_000;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SpanPersistingStream.class);
@@ -110,7 +107,8 @@ public class SpanPersistingStream {
     final KStream<String, SpanDynamic> spanStream = builder.stream(this.config.getInTopic(),
         Consumed.with(Serdes.String(), this.getAvroSerde(false)));
 
-    TimeWindows traceWindow = TimeWindows.of(Duration.of(WINDOW_SIZE_MS, ChronoUnit.MILLIS));
+    TimeWindows traceWindow =
+        TimeWindows.of(Duration.ofMillis(WINDOW_SIZE_MS)).grace(Duration.ofMillis(GRACE_MS));
 
     /*
      Only emits the (intermediary) aggregated trace if no new spans came in for a given duration
@@ -142,7 +140,7 @@ public class SpanPersistingStream {
     traceStream.mapValues(reducer::reduce)
         .foreach((k, t) -> {
           try {
-            repository.saveTrace(t);
+            repository.upsertTrace(t);
             pfLogger.logOperation();
           } catch (PersistingException e) {
             // TODO: How to handle these spans? Enqueue somewhere for retries?

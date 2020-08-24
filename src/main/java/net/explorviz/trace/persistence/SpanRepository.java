@@ -20,7 +20,7 @@ public interface SpanRepository {
    */
   void insert(SpanDynamic span) throws PersistingException;
 
-  void saveTrace(Trace trace) throws PersistingException;
+  void upsertTrace(Trace trace) throws PersistingException;
 
   /**
    * Finds a trace for a given a landscape token and trace id.

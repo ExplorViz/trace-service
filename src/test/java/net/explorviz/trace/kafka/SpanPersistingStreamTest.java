@@ -1,22 +1,15 @@
 package net.explorviz.trace.kafka;
 
-import static net.explorviz.trace.kafka.SpanPersistingStream.SUPPRESSION_TIME_MS;
-
 import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.quarkus.test.junit.QuarkusTest;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import javax.inject.Inject;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Timestamp;
@@ -24,15 +17,13 @@ import net.explorviz.avro.Trace;
 import net.explorviz.trace.TraceHelper;
 import net.explorviz.trace.persistence.PersistingException;
 import net.explorviz.trace.persistence.SpanRepository;
+import net.explorviz.trace.service.TimestampHelper;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.TestInputTopic;
-import org.apache.kafka.streams.TestOutputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
-import org.apache.tinkerpop.gremlin.structure.T;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,10 +36,8 @@ class SpanPersistingStreamTest {
 
   private TopologyTestDriver testDriver;
   private TestInputTopic<String, SpanDynamic> inputTopic;
-  private TestOutputTopic<String, Trace> outputTopic;
-
   private SpecificAvroSerde<SpanDynamic> spanDynamicSerde;
-  private SpecificAvroSerde<Trace> traceSerDe;
+
 
   @Inject
   KafkaConfig config;
@@ -96,7 +85,6 @@ class SpanPersistingStreamTest {
 
 
   /**
-   * Most basic test case.
    * Check whether two two spans with the same trace id are aggregated in the same trace.
    */
   @Test
@@ -107,12 +95,14 @@ class SpanPersistingStreamTest {
       Trace inserted = i.getArgumentAt(0, Trace.class);
       mockSpanDB.add(inserted);
       return null;
-    }).when(mockRepo).saveTrace(Mockito.any());
+    }).when(mockRepo).upsertTrace(Mockito.any());
 
     SpanDynamic testSpan = TraceHelper.randomSpan();
     inputTopic.pipeInput(testSpan.getTraceId(), testSpan);
+    forceSuppression(testSpan.getStartTime());
 
-
+    // Workaround to not access the mocked span db before updated
+    testDriver.getAllStateStores();
 
     Assertions.assertEquals(1, mockSpanDB.size());
     Assertions.assertEquals(testSpan, mockSpanDB.get(0).getSpanList().get(0));
@@ -125,22 +115,21 @@ class SpanPersistingStreamTest {
     Map<String, Trace> mockSpanDB = new HashMap<>();
     Mockito.doAnswer(i -> {
       Trace inserted = i.getArgumentAt(0, Trace.class);
-      String key = inserted.getLandscapeToken()+"::"+inserted.getTraceId();
-      System.out.println("SIZE: "+inserted.getSpanList().size());
+      String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
       mockSpanDB.put(key, inserted);
       return null;
-    }).when(mockRepo).saveTrace(Mockito.any());
+    }).when(mockRepo).upsertTrace(Mockito.any());
 
     int spansPerTrace = 20;
 
     Trace testTrace = TraceHelper.randomTrace(spansPerTrace);
-    // Same timestamp keeps them in the same window
     Timestamp t = testTrace.getStartTime();
-    for (SpanDynamic s: testTrace.getSpanList()) {
+    for (SpanDynamic s : testTrace.getSpanList()) {
+      t = Timestamp.newBuilder(t).setNanoAdjust(t.getNanoAdjust() + 1).build();
       s.setStartTime(t);
       inputTopic.pipeInput(s.getTraceId(), s);
     }
-    testDriver.advanceWallClockTime(Duration.ofSeconds(2000));
+    forceSuppression(t);
 
     String k = testTrace.getLandscapeToken() + "::" + testTrace.getTraceId();
     Assertions.assertEquals(1, mockSpanDB.size());
@@ -150,39 +139,96 @@ class SpanPersistingStreamTest {
 
   @Test
   void testMultipleTraces() throws PersistingException {
-    Map<String, Set<SpanDynamic>> mockSpanDB = new HashMap<>();
+    Map<String, Trace> mockSpanDB = new HashMap<>();
     Mockito.doAnswer(i -> {
-      SpanDynamic inserted = i.getArgumentAt(0, SpanDynamic.class);
-      String key = inserted.getLandscapeToken() + "|" + inserted.getTraceId();
-      Set<SpanDynamic> spans = mockSpanDB.get(key);
-      if (spans != null) {
-        spans.add(inserted);
-      } else {
-        Set<SpanDynamic> s = new HashSet<>();
-        s.add(inserted);
-        mockSpanDB.put(key, s);
-      }
+      Trace inserted = i.getArgumentAt(0, Trace.class);
+      String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
+      System.out.println("AAA: " + key);
+      System.out.println(inserted);
+      mockSpanDB.put(key, inserted);
       return null;
-    }).when(mockRepo).insert(Mockito.any());
+    }).when(mockRepo).upsertTrace(Mockito.any());
 
     int spansPerTrace = 20;
-    int traces = 20;
+    int traceAmount = 20;
 
-    for (int i = 0; i<traces; i++) {
+    // Create multiple traces that happen in parallel
+    List<KeyValue<String, SpanDynamic>> traces = new ArrayList<>();
+    Timestamp baseTime = TraceHelper.randomTrace(1).getStartTime();
+    for (int i = 0; i < traceAmount; i++) {
       Trace testTrace = TraceHelper.randomTrace(spansPerTrace);
+      Timestamp t = Timestamp.newBuilder(baseTime).build();
       for (SpanDynamic s : testTrace.getSpanList()) {
-        inputTopic.pipeInput(s.getTraceId(), s);
+        // Keep spans in one window
+        t = Timestamp.newBuilder(t).setNanoAdjust(t.getNanoAdjust() + 2).build();
+        s.setStartTime(t);
+        traces.add(new KeyValue<>(s.getTraceId(), s));
       }
     }
 
-    Assertions.assertEquals(traces, mockSpanDB.size());
-    for (Map.Entry<String, Set<SpanDynamic>> entry: mockSpanDB.entrySet()) {
-      Assertions.assertEquals(spansPerTrace, entry.getValue().size());
+    inputTopic.pipeKeyValueList(traces);
+    forceSuppression(baseTime);
+
+    Assertions.assertEquals(traceAmount, mockSpanDB.size());
+    for (Map.Entry<String, Trace> entry : mockSpanDB.entrySet()) {
+      Assertions.assertEquals(spansPerTrace, entry.getValue().getSpanList().size());
     }
 
   }
 
 
+  @Test
+  void testOutOfWindow() {
+    Map<String, Trace> mockSpanDB = new HashMap<>();
+    Mockito.doAnswer(i -> {
+      Trace inserted = i.getArgumentAt(0, Trace.class);
+      String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
+      mockSpanDB.computeIfPresent(key, (k, v) -> {
+        v.getSpanList().addAll(inserted.getSpanList());
+        return v;
+      });
+      mockSpanDB.putIfAbsent(key, inserted);
+      return null;
+    }).when(mockRepo).upsertTrace(Mockito.any());
+
+    int spansPerTrace = 20;
+
+    Trace testTrace = TraceHelper.randomTrace(spansPerTrace);
+    Timestamp ts = TraceHelper.randomTrace(1).getStartTime();
+    for (int i = 0; i < testTrace.getSpanList().size(); i++) {
+      SpanDynamic s = testTrace.getSpanList().get(i);
+      if (i < testTrace.getSpanList().size() - 1) {
+        ts = Timestamp.newBuilder(ts).setNanoAdjust(ts.getNanoAdjust() + 1).build();
+      } else {
+        // Last span arrives out of window
+        ts = Timestamp.newBuilder(ts)
+            .setSeconds(ts.getSeconds() + SpanPersistingStream.WINDOW_SIZE_MS / 1000).build();
+      }
+      s.setStartTime(ts);
+      inputTopic.pipeInput(s.getTraceId(), s);
+    }
+
+    forceSuppression(ts);
+
+    String k = testTrace.getLandscapeToken() + "::" + testTrace.getTraceId();
+    Assertions.assertEquals(1, mockSpanDB.size());
+    Assertions.assertEquals(testTrace.getSpanList().size(), mockSpanDB.get(k).getSpanList().size());
+  }
+
+
+
+
+
+  /**
+   * Forces the suppression to emit results by sending a dummy event with a timestamp
+   * larger than the suppression time.
+   */
+  private void forceSuppression(Timestamp lastTimestamp) {
+    SpanDynamic dummy = TraceHelper.randomSpan();
+    Instant ts = TimestampHelper.toInstant(lastTimestamp);
+    inputTopic.pipeInput(dummy.getTraceId(), dummy,
+        ts.plusSeconds(SpanPersistingStream.SUPPRESSION_TIME_MS + 1));
+  }
 
 
 
