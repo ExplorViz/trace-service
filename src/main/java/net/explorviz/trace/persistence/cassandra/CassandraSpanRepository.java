@@ -75,7 +75,7 @@ public class CassandraSpanRepository implements SpanRepository {
   }
 
   @Override
-  public void upsertTrace(final Trace trace) throws PersistingException {
+  public void saveTrace(final Trace trace) throws PersistingException {
     long timestamp = TimestampHelper.toInstant(trace.getStartTime()).toEpochMilli();
     Set<SpanDynamic> spanSet = new HashSet<>(trace.getSpanList());
     final SimpleStatement insertStmt =

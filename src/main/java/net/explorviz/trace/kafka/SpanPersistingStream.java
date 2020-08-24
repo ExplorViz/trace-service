@@ -6,7 +6,6 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Properties;
 import javax.enterprise.context.ApplicationScoped;
@@ -48,7 +47,6 @@ public class SpanPersistingStream {
 
   public static final long WINDOW_SIZE_MS = 10_000;
   public static final long GRACE_MS = 2_000;
-  public static final long SUPPRESSION_TIME_MS = 2_000;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SpanPersistingStream.class);
 
@@ -110,14 +108,6 @@ public class SpanPersistingStream {
     TimeWindows traceWindow =
         TimeWindows.of(Duration.ofMillis(WINDOW_SIZE_MS)).grace(Duration.ofMillis(GRACE_MS));
 
-    /*
-     Only emits the (intermediary) aggregated trace if no new spans came in for a given duration
-      or if more than 200 spans were aggregated.
-     */
-    Suppressed<Windowed<String>> timeSuppression = Suppressed
-        .untilTimeLimit(Duration.of(SUPPRESSION_TIME_MS, ChronoUnit.MILLIS), Suppressed.BufferConfig
-            .maxRecords(200));
-
     TraceAggregator aggregator = new TraceAggregator();
 
     // Group by landscapeToken::TraceId
@@ -128,19 +118,16 @@ public class SpanPersistingStream {
             .aggregate(Trace::new,
                 (key, value, aggregate) -> aggregator.aggregate(aggregate, value),
                 Materialized.with(Serdes.String(), this.getAvroSerde(false)))
-            .suppress(timeSuppression);
+            .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()));
 
     KStream<String, Trace> traceStream =
         traceTable.toStream().selectKey((k, v) -> v.getLandscapeToken() + "::" + k);
-
-    traceTable.queryableStoreName();
-
 
     TraceReducer reducer = new TraceReducer();
     traceStream.mapValues(reducer::reduce)
         .foreach((k, t) -> {
           try {
-            repository.upsertTrace(t);
+            repository.saveTrace(t);
             pfLogger.logOperation();
           } catch (PersistingException e) {
             // TODO: How to handle these spans? Enqueue somewhere for retries?

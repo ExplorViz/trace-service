@@ -4,6 +4,7 @@ import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.quarkus.test.junit.QuarkusTest;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -95,14 +96,11 @@ class SpanPersistingStreamTest {
       Trace inserted = i.getArgumentAt(0, Trace.class);
       mockSpanDB.add(inserted);
       return null;
-    }).when(mockRepo).upsertTrace(Mockito.any());
+    }).when(mockRepo).saveTrace(Mockito.any());
 
     SpanDynamic testSpan = TraceHelper.randomSpan();
     inputTopic.pipeInput(testSpan.getTraceId(), testSpan);
     forceSuppression(testSpan.getStartTime());
-
-    // Workaround to not access the mocked span db before updated
-    testDriver.getAllStateStores();
 
     Assertions.assertEquals(1, mockSpanDB.size());
     Assertions.assertEquals(testSpan, mockSpanDB.get(0).getSpanList().get(0));
@@ -118,7 +116,7 @@ class SpanPersistingStreamTest {
       String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
       mockSpanDB.put(key, inserted);
       return null;
-    }).when(mockRepo).upsertTrace(Mockito.any());
+    }).when(mockRepo).saveTrace(Mockito.any());
 
     int spansPerTrace = 20;
 
@@ -147,7 +145,7 @@ class SpanPersistingStreamTest {
       System.out.println(inserted);
       mockSpanDB.put(key, inserted);
       return null;
-    }).when(mockRepo).upsertTrace(Mockito.any());
+    }).when(mockRepo).saveTrace(Mockito.any());
 
     int spansPerTrace = 20;
     int traceAmount = 20;
@@ -189,7 +187,7 @@ class SpanPersistingStreamTest {
       });
       mockSpanDB.putIfAbsent(key, inserted);
       return null;
-    }).when(mockRepo).upsertTrace(Mockito.any());
+    }).when(mockRepo).saveTrace(Mockito.any());
 
     int spansPerTrace = 20;
 
@@ -201,8 +199,9 @@ class SpanPersistingStreamTest {
         ts = Timestamp.newBuilder(ts).setNanoAdjust(ts.getNanoAdjust() + 1).build();
       } else {
         // Last span arrives out of window
+        long secs = Duration.ofMillis(SpanPersistingStream.WINDOW_SIZE_MS).toSeconds();
         ts = Timestamp.newBuilder(ts)
-            .setSeconds(ts.getSeconds() + SpanPersistingStream.WINDOW_SIZE_MS / 1000).build();
+            .setSeconds(ts.getSeconds() + secs).build();
       }
       s.setStartTime(ts);
       inputTopic.pipeInput(s.getTraceId(), s);
@@ -217,17 +216,18 @@ class SpanPersistingStreamTest {
 
 
 
-
-
   /**
    * Forces the suppression to emit results by sending a dummy event with a timestamp
    * larger than the suppression time.
    */
   private void forceSuppression(Timestamp lastTimestamp) {
+    long secs = Duration.ofMillis(SpanPersistingStream.WINDOW_SIZE_MS)
+        .plusMillis(SpanPersistingStream.GRACE_MS).toSeconds();
     SpanDynamic dummy = TraceHelper.randomSpan();
+
     Instant ts = TimestampHelper.toInstant(lastTimestamp);
     inputTopic.pipeInput(dummy.getTraceId(), dummy,
-        ts.plusSeconds(SpanPersistingStream.SUPPRESSION_TIME_MS + 1));
+        ts.plusSeconds(secs+1));
   }
 
 
