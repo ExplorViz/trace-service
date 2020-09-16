@@ -1,7 +1,7 @@
-package net.explorviz.kafka;
+package net.explorviz.trace.kafka;
 
 import java.time.Instant;
-import net.explorviz.avro.EVSpan;
+import net.explorviz.avro.SpanDynamic;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.streams.processor.TimestampExtractor;
 
@@ -9,7 +9,7 @@ public class EVSpanTimestampKafkaExtractor implements TimestampExtractor {
 
   @Override
   public long extract(final ConsumerRecord<Object, Object> record, final long previousTimestamp) {
-    final EVSpan span = (EVSpan) record.value();
+    final SpanDynamic span = (SpanDynamic) record.value();
 
     if (span != null) {
       // timestamp = Duration.ofNanos(span.getStartTime()).toMillis();

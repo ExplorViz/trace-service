@@ -25,14 +25,25 @@ dependencies {
   implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
 
   implementation 'io.quarkus:quarkus-kafka-streams'
+  implementation 'io.quarkus:quarkus-resteasy'
+  implementation 'io.quarkus:quarkus-resteasy-jackson'
 
   implementation 'io.opencensus:opencensus-proto:0.2.0'
 
   implementation group: 'io.confluent', name: 'kafka-avro-serializer', version: '5.5.0'
   implementation group: 'io.confluent', name: 'kafka-streams-avro-serde', version: '5.5.0'
 
+  implementation group: 'com.datastax.oss', name: 'java-driver-core', version: '4.8.0'
+  implementation group: 'com.datastax.oss', name: 'java-driver-query-builder', version: '4.8.0'
+
+
   testImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'
   testImplementation 'io.quarkus:quarkus-junit5'
+
+  testImplementation group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
+  testImplementation group: 'org.cassandraunit', name: 'cassandra-unit', version: '4.3.1.0'
+
+
 }
 
 group 'net.explorviz'

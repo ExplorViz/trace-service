@@ -1,11 +1,20 @@
 {
   "namespace": "net.explorviz.avro",
   "type": "record",
-  "name": "Trace",
+  "name": "SpanDynamic",
   "fields": [
     {
       "name": "landscapeToken",
       "type": "string"
+    },
+    {
+      "name": "spanId",
+      "type": "string"
+    },
+    {
+      "name": "parentSpanId",
+      "type": "string",
+      "default": ""
     },
     {
       "name": "traceId",
@@ -20,25 +29,8 @@
       "type": "net.explorviz.avro.Timestamp"
     },
     {
-      "name": "duration",
-      "type": "long"
-    },
-    {
-      "name": "overallRequestCount",
-      "type": "int",
-      "default": 1
-    },
-    {
-      "name": "traceCount",
-      "type": "int",
-      "default": 1
-    },
-    {
-      "name": "spanList",
-      "type": {
-        "type": "array",
-        "items": "net.explorviz.avro.SpanDynamic"
-      }
+      "name": "hashCode",
+      "type": "string"
     }
   ]
 }
