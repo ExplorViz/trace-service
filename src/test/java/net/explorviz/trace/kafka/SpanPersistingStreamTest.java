@@ -51,8 +51,6 @@ class SpanPersistingStreamTest {
 
     final MockSchemaRegistryClient mockSRC = new MockSchemaRegistryClient();
 
-    assert config.getOutTopic() != null;
-
     mockRepo = Mockito.mock(SpanRepository.class);
 
     final Topology topology =
@@ -80,6 +78,7 @@ class SpanPersistingStreamTest {
   @AfterEach
   void afterEach() {
     this.spanDynamicSerde.close();
+    testDriver.getAllStateStores().forEach((k,v) -> v.close());
     this.testDriver.close();
   }
 
@@ -131,7 +130,6 @@ class SpanPersistingStreamTest {
 
     String k = testTrace.getLandscapeToken() + "::" + testTrace.getTraceId();
     Assertions.assertEquals(1, mockSpanDB.size());
-    System.out.println(mockSpanDB.entrySet().toArray()[0]);
     Assertions.assertEquals(testTrace.getSpanList().size(), mockSpanDB.get(k).getSpanList().size());
   }
 
@@ -141,8 +139,6 @@ class SpanPersistingStreamTest {
     Mockito.doAnswer(i -> {
       Trace inserted = i.getArgumentAt(0, Trace.class);
       String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
-      System.out.println("AAA: " + key);
-      System.out.println(inserted);
       mockSpanDB.put(key, inserted);
       return null;
     }).when(mockRepo).saveTrace(Mockito.any());
@@ -221,13 +217,13 @@ class SpanPersistingStreamTest {
    * larger than the suppression time.
    */
   private void forceSuppression(Timestamp lastTimestamp) {
-    long secs = Duration.ofMillis(SpanPersistingStream.WINDOW_SIZE_MS)
-        .plusMillis(SpanPersistingStream.GRACE_MS).toSeconds();
+    Duration secs = Duration.ofMillis(SpanPersistingStream.WINDOW_SIZE_MS)
+        .plusMillis(SpanPersistingStream.GRACE_MS);
     SpanDynamic dummy = TraceHelper.randomSpan();
 
-    Instant ts = TimestampHelper.toInstant(lastTimestamp);
-    inputTopic.pipeInput(dummy.getTraceId(), dummy,
-        ts.plusSeconds(secs+1));
+    Instant ts = TimestampHelper.toInstant(lastTimestamp).plus(secs);
+    dummy.setStartTime(TimestampHelper.toTimestamp(ts));
+    inputTopic.pipeInput(dummy.getTraceId(), dummy);
   }
 
 
