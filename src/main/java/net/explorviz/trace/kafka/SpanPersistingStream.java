@@ -16,7 +16,6 @@ import net.explorviz.avro.Trace;
 import net.explorviz.trace.persistence.PersistingException;
 import net.explorviz.trace.persistence.SpanRepository;
 import net.explorviz.trace.service.TraceAggregator;
-import net.explorviz.trace.service.TraceReducer;
 import net.explorviz.trace.util.PerformanceLogger;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
@@ -123,9 +122,7 @@ public class SpanPersistingStream {
     KStream<String, Trace> traceStream =
         traceTable.toStream().selectKey((k, v) -> v.getLandscapeToken() + "::" + k);
 
-    TraceReducer reducer = new TraceReducer();
-    traceStream.mapValues(reducer::reduce)
-        .foreach((k, t) -> {
+    traceStream.foreach((k, t) -> {
           try {
             repository.saveTrace(t);
             pfLogger.logOperation();
