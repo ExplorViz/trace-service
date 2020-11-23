@@ -180,5 +180,13 @@ public class CassandraSpanRepository implements SpanRepository {
     return traces;
   }
 
+  @Override
+  public void deleteAll(final String landscapeToken) {
+    String deletionQuery =
+        QueryBuilder.deleteFrom(DBHelper.KEYSPACE_NAME, DBHelper.TABLE_SPANS)
+            .whereColumn(DBHelper.COL_TOKEN).isEqualTo(QueryBuilder.literal(landscapeToken)).asCql();
+    db.getSession().execute(deletionQuery);
+  }
+
 
 }

@@ -23,7 +23,7 @@ public interface TraceService {
    * Get all traces of a specific landscape that occurred after a given point in time.
    *
    * @param landscapeToken the token of the landscape
-   * @param from     the timestamp from which on to retrieve traces (inclusive)
+   * @param from           the timestamp from which on to retrieve traces (inclusive)
    * @return all traces occurred after the given timestamp
    */
   default Collection<Trace> getFrom(String landscapeToken, Instant from) {
@@ -39,5 +39,13 @@ public interface TraceService {
    * @return all traces occurred within the given timestamps
    */
   Collection<Trace> getBetween(String landscapeToken, Instant millisFrom, Instant millisTo);
+
+
+  /**
+   * Deletes all traces associated to a landscape token.
+   *
+   * @param landscapeToken the token to delete all traces for
+   */
+  void deleteAll(String landscapeToken);
 
 }
