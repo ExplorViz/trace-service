@@ -15,6 +15,7 @@ public class KafkaConfig {
   @ConfigProperty(name = "quarkus.kafka-streams.application-id")
   String applicationId;
 
+
   @ConfigProperty(name = "quarkus.kafka-streams.bootstrap-servers")
   String bootstrapServers;
 
