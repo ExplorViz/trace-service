@@ -124,7 +124,7 @@ public class SpanPersistingStream {
 
     traceStream.foreach((k, t) -> {
           try {
-            repository.saveTrace(t);
+            repository.saveTraceAsync(t);
             pfLogger.logOperation();
           } catch (PersistingException e) {
             // TODO: How to handle these spans? Enqueue somewhere for retries?
