@@ -1,10 +1,12 @@
 package net.explorviz.trace.persistence;
 
+import com.datastax.oss.driver.api.core.cql.AsyncResultSet;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletionStage;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
 
@@ -21,6 +23,8 @@ public interface SpanRepository {
   void insert(SpanDynamic span) throws PersistingException;
 
   void saveTrace(Trace trace) throws PersistingException;
+
+  CompletionStage<AsyncResultSet> saveTraceAsync(Trace trace) throws PersistingException;
 
   /**
    * Finds a trace for a given a landscape token and trace id.

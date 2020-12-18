@@ -1,6 +1,7 @@
 package net.explorviz.trace.persistence.cassandra;
 
 import com.datastax.oss.driver.api.core.AllNodesFailedException;
+import com.datastax.oss.driver.api.core.cql.AsyncResultSet;
 import com.datastax.oss.driver.api.core.cql.ExecutionInfo;
 import com.datastax.oss.driver.api.core.cql.ResultSet;
 import com.datastax.oss.driver.api.core.cql.Row;
@@ -17,6 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletionStage;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import net.explorviz.avro.SpanDynamic;
@@ -52,8 +54,6 @@ public class CassandraSpanRepository implements SpanRepository {
 
   @Override
   public void insert(SpanDynamic span) throws PersistingException {
-
-
     try {
       // Try to append span to the set of spans corresponding the trace id and token
       // This fails if the row does not exists
@@ -74,18 +74,27 @@ public class CassandraSpanRepository implements SpanRepository {
     }
   }
 
-  @Override
-  public void saveTrace(final Trace trace) throws PersistingException {
+  private SimpleStatement buildInsertTraceStatement(Trace trace) {
     long timestamp = TimestampHelper.toInstant(trace.getStartTime()).toEpochMilli();
     Set<SpanDynamic> spanSet = new HashSet<>(trace.getSpanList());
-    final SimpleStatement insertStmt =
-        QueryBuilder.insertInto(DBHelper.KEYSPACE_NAME, DBHelper.TABLE_SPANS)
+    return QueryBuilder.insertInto(DBHelper.KEYSPACE_NAME, DBHelper.TABLE_SPANS)
             .value(DBHelper.COL_TOKEN, QueryBuilder.literal(trace.getLandscapeToken()))
             .value(DBHelper.COL_TIMESTAMP, QueryBuilder.literal(timestamp))
             .value(DBHelper.COL_TRACE_ID, QueryBuilder.literal(trace.getTraceId()))
             .value(DBHelper.COL_SPANS, QueryBuilder.literal(spanSet, db.getCodecRegistry()))
             .build();
+  }
+
+  @Override
+  public void saveTrace(final Trace trace) throws PersistingException {
+    SimpleStatement insertStmt = buildInsertTraceStatement(trace);
     this.db.getSession().execute(insertStmt);
+  }
+
+  @Override
+  public CompletionStage<AsyncResultSet> saveTraceAsync(final Trace trace) throws PersistingException {
+    SimpleStatement insertStmt = buildInsertTraceStatement(trace);
+    return this.db.getSession().executeAsync(insertStmt);
   }
 
 

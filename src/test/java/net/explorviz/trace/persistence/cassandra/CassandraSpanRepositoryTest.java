@@ -3,6 +3,7 @@ package net.explorviz.trace.persistence.cassandra;
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -53,6 +54,15 @@ class CassandraSpanRepositoryTest extends CassandraTest {
   }
 
   @Test
+  void saveTraceAsync() throws PersistingException {
+    Trace t = TraceHelper.randomTrace(20);
+
+    repo.saveTraceAsync(t).toCompletableFuture().join();
+    Collection<SpanDynamic> got = repo.getSpans(t.getLandscapeToken(), t.getTraceId()).orElseThrow();
+    Assertions.assertEquals(20, got.size());
+  }
+
+  @Test
   void insertSingleTrace() throws PersistingException {
     final int spansPerTrace = 20;
     Trace testTrace = TraceHelper.randomTrace(spansPerTrace);
@@ -83,6 +93,7 @@ class CassandraSpanRepositoryTest extends CassandraTest {
 
     Assertions.assertEquals(expected, gotList);
   }
+
 
   @Test
   void insertMultipleTraces() throws PersistingException {
