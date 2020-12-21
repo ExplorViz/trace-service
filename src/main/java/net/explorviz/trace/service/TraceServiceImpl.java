@@ -35,7 +35,10 @@ public class TraceServiceImpl implements TraceService {
     Optional<Collection<SpanDynamic>> spans = repository.getSpans(landscapeToken, traceId);
     if (spans.isPresent()) {
       try {
-        result = Optional.ofNullable(builder.build(spans.get()));
+        Trace built = builder.build(spans.get());
+        // Set token for trace here as the spans do not contain it
+        built.setLandscapeToken(landscapeToken);
+        result = Optional.of(built);
       } catch (IllegalArgumentException e) {
         if (LOGGER.isErrorEnabled()) {
           LOGGER.error("Could not build a trace: {0}", e);
@@ -55,6 +58,7 @@ public class TraceServiceImpl implements TraceService {
     for (Set<SpanDynamic> spans: spanSets) {
       try {
         Trace t = builder.build(spans);
+        t.setLandscapeToken(landscapeToken);
         traces.add(t);
       }catch (IllegalArgumentException e) {
         if (LOGGER.isErrorEnabled()) {
@@ -63,6 +67,11 @@ public class TraceServiceImpl implements TraceService {
       }
     }
     return traces;
+  }
+
+  @Override
+  public void deleteAll(final String landscapeToken) {
+    repository.deleteAll(landscapeToken);
   }
 
 

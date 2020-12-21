@@ -67,7 +67,6 @@ public class SpanPersistingStream {
     this.registryClient = schemaRegistryClient;
     this.config = config;
 
-    assert config.getOutTopic() != null;
     this.topology = this.buildTopology();
     this.setupStreamsConfig();
 
