@@ -69,5 +69,10 @@ public class TraceServiceImpl implements TraceService {
     return traces;
   }
 
+  @Override
+  public void deleteAll(final String landscapeToken) {
+    repository.deleteAll(landscapeToken);
+  }
+
 
 }

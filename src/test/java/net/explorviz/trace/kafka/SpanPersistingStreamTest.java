@@ -3,6 +3,7 @@ package net.explorviz.trace.kafka;
 import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
+import io.quarkus.test.junit.QuarkusMock;
 import io.quarkus.test.junit.QuarkusTest;
 import java.time.Duration;
 import java.time.Instant;
@@ -16,6 +17,7 @@ import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Timestamp;
 import net.explorviz.avro.Trace;
 import net.explorviz.trace.TraceHelper;
+import net.explorviz.trace.events.TokenEventConsumer;
 import net.explorviz.trace.persistence.PersistingException;
 import net.explorviz.trace.persistence.SpanRepository;
 import net.explorviz.trace.service.TimestampHelper;
@@ -27,21 +29,18 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@QuarkusTest
+
 class SpanPersistingStreamTest {
 
 
   private TopologyTestDriver testDriver;
   private TestInputTopic<String, SpanDynamic> inputTopic;
   private SpecificAvroSerde<SpanDynamic> spanDynamicSerde;
-
-
-  @Inject
-  KafkaConfig config;
 
   SpanRepository mockRepo;
 
@@ -52,9 +51,9 @@ class SpanPersistingStreamTest {
     final MockSchemaRegistryClient mockSRC = new MockSchemaRegistryClient();
 
     mockRepo = Mockito.mock(SpanRepository.class);
+    KafkaConfig config = Utils.testKafkaConfigs();
 
-    final Topology topology =
-        new SpanPersistingStream(mockSRC, this.config, mockRepo).getTopology();
+    final Topology topology = new SpanPersistingStream(mockSRC, config, mockRepo).getTopology();
 
     this.spanDynamicSerde = new SpecificAvroSerde<>(mockSRC);
 
@@ -62,7 +61,7 @@ class SpanPersistingStreamTest {
     final Properties props = new Properties();
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test");
     props.put(StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG,
-        this.config.getTimestampExtractor());
+        config.getTimestampExtractor());
     props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:1234");
 
     final Map<String, String> conf =
@@ -71,7 +70,7 @@ class SpanPersistingStreamTest {
 
     this.testDriver = new TopologyTestDriver(topology, props);
 
-    this.inputTopic = this.testDriver.createInputTopic(this.config.getInTopic(),
+    this.inputTopic = this.testDriver.createInputTopic(config.getInTopic(),
         Serdes.String().serializer(), this.spanDynamicSerde.serializer());
   }
 

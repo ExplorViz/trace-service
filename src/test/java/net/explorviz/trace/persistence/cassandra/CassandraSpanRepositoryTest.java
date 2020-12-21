@@ -2,6 +2,7 @@ package net.explorviz.trace.persistence.cassandra;
 
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -130,4 +131,19 @@ class CassandraSpanRepositoryTest extends CassandraTest {
     got.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
     Assertions.assertEquals(expected, got);
   }
+
+  @Test
+  void deleteById() {
+
+    Trace testTrace = TraceHelper.randomTrace(100);
+    final String token = testTrace.getLandscapeToken();
+    for (SpanDynamic s : testTrace.getSpanList()) {
+      repo.insert(s);
+    }
+    repo.deleteAll(token);
+
+    Assertions.assertFalse(repo.getSpans(token, testTrace.getTraceId()).isPresent());
+
+  }
+
 }
