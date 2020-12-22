@@ -1,14 +1,15 @@
 package net.explorviz.trace.service;
 
-import static net.explorviz.trace.service.TimestampHelper.isAfter;
-import static net.explorviz.trace.service.TimestampHelper.isBefore;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import javax.inject.Singleton;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Timestamp;
 import net.explorviz.avro.Trace;
+
+import javax.inject.Singleton;
+import java.util.ArrayList;
+import java.util.Collection;
+
+import static net.explorviz.trace.service.TimestampHelper.isAfter;
+import static net.explorviz.trace.service.TimestampHelper.isBefore;
 
 @Singleton
 public class TraceBuilderImpl implements TraceBuilder {
@@ -40,7 +41,8 @@ public class TraceBuilderImpl implements TraceBuilder {
       if (isBefore(span.getStartTime(), builder.getStartTime())) {
         // Span is the current earliest in the trace
         builder.setStartTime(span.getStartTime());
-      } else if (isAfter(span.getEndTime(), builder.getEndTime())) {
+      }
+      if (isAfter(span.getEndTime(), builder.getEndTime())) {
         // Span is the current latest in the trace
         builder.setEndTime(span.getEndTime());
       }
