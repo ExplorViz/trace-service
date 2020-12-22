@@ -94,7 +94,7 @@ class SpanPersistingStreamTest {
       Trace inserted = i.getArgumentAt(0, Trace.class);
       mockSpanDB.add(inserted);
       return null;
-    }).when(mockRepo).saveTrace(Mockito.any());
+    }).when(mockRepo).saveTraceAsync(Mockito.any());
 
     SpanDynamic testSpan = TraceHelper.randomSpan();
     inputTopic.pipeInput(testSpan.getTraceId(), testSpan);
@@ -114,7 +114,7 @@ class SpanPersistingStreamTest {
       String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
       mockSpanDB.put(key, inserted);
       return null;
-    }).when(mockRepo).saveTrace(Mockito.any());
+    }).when(mockRepo).saveTraceAsync(Mockito.any());
 
     int spansPerTrace = 20;
 
@@ -140,7 +140,7 @@ class SpanPersistingStreamTest {
       String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
       mockSpanDB.put(key, inserted);
       return null;
-    }).when(mockRepo).saveTrace(Mockito.any());
+    }).when(mockRepo).saveTraceAsync(Mockito.any());
 
     int spansPerTrace = 20;
     int traceAmount = 20;
@@ -182,7 +182,7 @@ class SpanPersistingStreamTest {
       });
       mockSpanDB.putIfAbsent(key, inserted);
       return null;
-    }).when(mockRepo).saveTrace(Mockito.any());
+    }).when(mockRepo).saveTraceAsync(Mockito.any());
 
     int spansPerTrace = 20;
 
