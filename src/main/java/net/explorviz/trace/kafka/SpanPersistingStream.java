@@ -24,6 +24,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.KStream;
@@ -71,15 +72,15 @@ public class SpanPersistingStream {
     this.setupStreamsConfig();
 
     this.repository = repository;
+    this.stream = new KafkaStreams(this.topology, this.streamsConfig);
 
   }
-
   public KafkaStreams getStream() {
     return stream;
   }
 
   void onStart(@Observes final StartupEvent event) {
-    this.stream = new KafkaStreams(this.topology, this.streamsConfig);
+
     this.stream.cleanUp();
     this.stream.start();
   }
@@ -96,6 +97,9 @@ public class SpanPersistingStream {
     this.streamsConfig.put(StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG,
         this.config.getTimestampExtractor());
     this.streamsConfig.put(StreamsConfig.APPLICATION_ID_CONFIG, this.config.getApplicationId());
+    streamsConfig.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
+        LogAndContinueExceptionHandler.class);
+
   }
 
   private Topology buildTopology() {
