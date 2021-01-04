@@ -3,6 +3,8 @@ package net.explorviz.trace.kafka;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.binder.kafka.KafkaStreamsMetrics;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import java.time.Duration;
@@ -61,6 +63,10 @@ public class SpanPersistingStream {
   private SpanRepository repository;
 
   @Inject
+  MeterRegistry metricRegistry;
+
+
+  @Inject
   public SpanPersistingStream(final SchemaRegistryClient schemaRegistryClient,
                               final KafkaConfig config,
                               final SpanRepository repository) {
@@ -72,7 +78,7 @@ public class SpanPersistingStream {
     this.setupStreamsConfig();
 
     this.repository = repository;
-    this.stream = new KafkaStreams(this.topology, this.streamsConfig);
+
 
   }
   public KafkaStreams getStream() {
@@ -80,9 +86,13 @@ public class SpanPersistingStream {
   }
 
   void onStart(@Observes final StartupEvent event) {
-
+    this.stream = new KafkaStreams(this.topology, this.streamsConfig);
     this.stream.cleanUp();
     this.stream.start();
+
+    KafkaStreamsMetrics ksm = new KafkaStreamsMetrics(this.stream);
+    ksm.bindTo(this.metricRegistry);
+
   }
 
   void onStop(@Observes final ShutdownEvent event) {
