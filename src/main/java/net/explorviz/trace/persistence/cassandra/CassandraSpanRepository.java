@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Cassandra-backed repository to access and save {@link net.explorviz.avro.Trace} entities.
  */
-@ApplicationScoped
+//@ApplicationScoped
 public class CassandraSpanRepository implements SpanRepository {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CassandraSpanRepository.class);
