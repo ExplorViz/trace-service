@@ -55,7 +55,7 @@ public class SpanPersistingStream {
   private final SchemaRegistryClient registryClient;
   private final KafkaConfig config;
 
-  private KafkaStreams streams;
+  private KafkaStreams stream;
 
   private SpanRepository repository;
 
@@ -74,14 +74,18 @@ public class SpanPersistingStream {
 
   }
 
+  public KafkaStreams getStream() {
+    return stream;
+  }
+
   void onStart(@Observes final StartupEvent event) {
-    this.streams = new KafkaStreams(this.topology, this.streamsConfig);
-    this.streams.cleanUp();
-    this.streams.start();
+    this.stream = new KafkaStreams(this.topology, this.streamsConfig);
+    this.stream.cleanUp();
+    this.stream.start();
   }
 
   void onStop(@Observes final ShutdownEvent event) {
-    this.streams.close();
+    this.stream.close();
   }
 
   private void setupStreamsConfig() {
