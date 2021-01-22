@@ -36,7 +36,7 @@ public interface SpanRepository {
 
 
   /**
-   * Returns all traces for a specific landscape between a given range
+   * Returns all traces for a specific landscape between a given range.
    * @param landscapeToken the landscape token
    * @param from the (inclusive) time of the earliest trace
    * @param to the (inclusive) time of the latest trace
@@ -45,7 +45,7 @@ public interface SpanRepository {
   List<Set<SpanDynamic>> getAllInRange(String landscapeToken, Instant from, Instant to);
 
   /**
-   * Delete all traces for a given landscape token
+   * Delete all traces for a given landscape token.
    * @param landscapeToken the landscape token
    */
   void deleteAll(String landscapeToken);

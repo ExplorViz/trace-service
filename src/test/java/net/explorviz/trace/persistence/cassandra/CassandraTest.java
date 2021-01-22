@@ -12,7 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
  */
 public class CassandraTest {
 
-  protected DBHelper db;
+  protected DbHelper db;
   protected CqlSession sess;
 
 
@@ -25,13 +25,13 @@ public class CassandraTest {
   @BeforeEach
   void setUpDb() {
     sess = EmbeddedCassandraServerHelper.getSession();
-    db = new DBHelper(sess);
+    db = new DbHelper(sess);
     db.initialize();
   }
 
   @AfterEach
   void tearDown() {
-    EmbeddedCassandraServerHelper.cleanDataEmbeddedCassandra(DBHelper.KEYSPACE_NAME);
+    EmbeddedCassandraServerHelper.cleanDataEmbeddedCassandra(DbHelper.KEYSPACE_NAME);
   }
 
 

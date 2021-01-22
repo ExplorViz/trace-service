@@ -3,43 +3,40 @@ package net.explorviz.trace.kafka;
 import javax.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+/**
+ * Configuration options for Kafka.
+ */
 @ApplicationScoped
 // https://quarkus.io/guides/config#using-configproperties
 public class KafkaConfig {
 
-  public static final String TRACES_STORE = "traces";
-
-  private final Class<EVSpanTimestampKafkaExtractor> TIMESTAMP_EXTRACTOR =
-      EVSpanTimestampKafkaExtractor.class;
+  private static final Class<SpanTimestampKafkaExtractor> TIMESTAMP_EXTRACTOR =
+      SpanTimestampKafkaExtractor.class;
 
   @ConfigProperty(name = "quarkus.kafka-streams.application-id")
-  String applicationId;
+  String applicationId; // NOCS
 
 
   @ConfigProperty(name = "quarkus.kafka-streams.bootstrap-servers")
-  String bootstrapServers;
+  String bootstrapServers; // NOCS
 
   @ConfigProperty(name = "explorviz.kafka-streams.topics.in")
-  String inTopic;
+  String inTopic; // NOCS
 
   @ConfigProperty(name = "explorviz.kafka-streams.topics.out")
-  String outTopic;
+  String outTopic; // NOCS
 
   @ConfigProperty(name = "explorviz.schema-registry.url")
-  String schemaRegistryUrl;
+  String schemaRegistryUrl; // NOCS
 
   @ConfigProperty(name = "explorviz.commit-interval-ms")
-  int commitIntervalMs;
+  int commitIntervalMs; // NOCS
 
   public int getCommitIntervalMs() {
     return this.commitIntervalMs;
   }
 
-  public void setCommitIntervalMs(final int commitIntervalMs) {
-    this.commitIntervalMs = commitIntervalMs;
-  }
-
-  public Class<EVSpanTimestampKafkaExtractor> getTimestampExtractor() {
+  public Class<SpanTimestampKafkaExtractor> getTimestampExtractor() {
     return this.TIMESTAMP_EXTRACTOR;
   }
 
@@ -53,10 +50,6 @@ public class KafkaConfig {
 
   public String getInTopic() {
     return this.inTopic;
-  }
-
-  public String getOutTopic() {
-    return this.outTopic;
   }
 
   public String getSchemaRegistryUrl() {

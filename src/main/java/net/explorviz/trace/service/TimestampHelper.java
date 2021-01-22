@@ -1,10 +1,7 @@
 package net.explorviz.trace.service;
 
-import java.sql.Time;
 import java.time.Duration;
 import java.time.Instant;
-import jnr.ffi.annotations.In;
-import jnr.posix.Times;
 import net.explorviz.avro.Timestamp;
 
 
@@ -71,7 +68,7 @@ public class TimestampHelper {
   }
 
   /**
-   * Calculates the duration between two timestamps in milliseconds
+   * Calculates the duration between two timestamps in milliseconds.
    *
    * @param t1 the first timestamp
    * @param t2 the second timestamp
@@ -85,6 +82,7 @@ public class TimestampHelper {
 
   /**
    * Converts a timestamp to an instant. Converse of {@link #toTimestamp(Instant)}.
+   *
    * @param t the timestamp
    * @return an instant representing the exact same time as the timestamp
    */
@@ -94,6 +92,7 @@ public class TimestampHelper {
 
   /**
    * Converts an instant to a timestamp. Converse of {@link #toInstant(Timestamp)}.
+   *
    * @param i the instant
    * @return a timestamp representing the exact same time as the instant
    */

@@ -1,16 +1,18 @@
 package net.explorviz.trace.service;
 
+import static net.explorviz.trace.service.TimestampHelper.isAfter;
+import static net.explorviz.trace.service.TimestampHelper.isBefore;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import javax.inject.Singleton;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Timestamp;
 import net.explorviz.avro.Trace;
 
-import javax.inject.Singleton;
-import java.util.ArrayList;
-import java.util.Collection;
-
-import static net.explorviz.trace.service.TimestampHelper.isAfter;
-import static net.explorviz.trace.service.TimestampHelper.isBefore;
-
+/**
+ * Builds a trace out of a set spans.
+ */
 @Singleton
 public class TraceBuilderImpl implements TraceBuilder {
 

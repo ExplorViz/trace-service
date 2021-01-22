@@ -2,12 +2,9 @@ package net.explorviz.trace.persistence.cassandra;
 
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
@@ -39,17 +36,17 @@ class CassandraSpanRepositoryTest extends CassandraTest {
     SpanDynamic testSpan = TraceHelper.randomSpan();
     repo.insert(testSpan);
 
-    String getInserted = QueryBuilder.selectFrom(DBHelper.KEYSPACE_NAME, DBHelper.TABLE_SPANS)
+    String getInserted = QueryBuilder.selectFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
         .all()
-        .whereColumn(DBHelper.COL_TOKEN)
+        .whereColumn(DbHelper.COL_TOKEN)
         .isEqualTo(QueryBuilder.literal(testSpan.getLandscapeToken()))
-        .whereColumn(DBHelper.COL_TRACE_ID).isEqualTo(QueryBuilder.literal(testSpan.getTraceId()))
+        .whereColumn(DbHelper.COL_TRACE_ID).isEqualTo(QueryBuilder.literal(testSpan.getTraceId()))
         .asCql();
     List<Row> results = db.getSession().execute(getInserted).all();
 
     testSpan.setLandscapeToken(""); // Not persisted, do not compare
 
-    Set<SpanDynamic> got = results.get(0).getSet(DBHelper.COL_SPANS, SpanDynamic.class);
+    Set<SpanDynamic> got = results.get(0).getSet(DbHelper.COL_SPANS, SpanDynamic.class);
     Assertions.assertEquals(1, got.size());
     Assertions.assertEquals(testSpan, got.stream().findAny().get());
   }
@@ -72,17 +69,17 @@ class CassandraSpanRepositoryTest extends CassandraTest {
       repo.insert(s);
     }
 
-    String getInserted = QueryBuilder.selectFrom(DBHelper.KEYSPACE_NAME, DBHelper.TABLE_SPANS)
+    String getInserted = QueryBuilder.selectFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
         .all()
-        .whereColumn(DBHelper.COL_TOKEN)
+        .whereColumn(DbHelper.COL_TOKEN)
         .isEqualTo(QueryBuilder.literal(testTrace.getLandscapeToken()))
-        .whereColumn(DBHelper.COL_TRACE_ID).isEqualTo(QueryBuilder.literal(testTrace.getTraceId()))
+        .whereColumn(DbHelper.COL_TRACE_ID).isEqualTo(QueryBuilder.literal(testTrace.getTraceId()))
         .asCql();
     List<Row> results = db.getSession().execute(getInserted).all();
 
     // Only one trace was created
     Assertions.assertEquals(1, results.size());
-    Set<SpanDynamic> got = results.get(0).getSet(DBHelper.COL_SPANS, SpanDynamic.class);
+    Set<SpanDynamic> got = results.get(0).getSet(DbHelper.COL_SPANS, SpanDynamic.class);
 
     List<SpanDynamic> expected = new ArrayList<>(testTrace.getSpanList());
     expected.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
@@ -108,7 +105,7 @@ class CassandraSpanRepositoryTest extends CassandraTest {
       }
     }
 
-    String getInserted = QueryBuilder.selectFrom(DBHelper.KEYSPACE_NAME, DBHelper.TABLE_SPANS)
+    String getInserted = QueryBuilder.selectFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
         .all()
         .asCql();
     List<Row> results = db.getSession().execute(getInserted).all();
@@ -118,7 +115,7 @@ class CassandraSpanRepositoryTest extends CassandraTest {
 
     // Each trace should have #spansPerTraces spans
     for (Row r : results) {
-      Set<SpanDynamic> spans = r.getSet(DBHelper.COL_SPANS, SpanDynamic.class);
+      Set<SpanDynamic> spans = r.getSet(DbHelper.COL_SPANS, SpanDynamic.class);
       Assertions.assertEquals(spansPerTraces, spans.size());
     }
   }

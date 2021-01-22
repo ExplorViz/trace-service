@@ -16,7 +16,6 @@ import net.explorviz.avro.Trace;
 import net.explorviz.trace.persistence.PersistingException;
 import net.explorviz.trace.persistence.SpanRepository;
 import net.explorviz.trace.service.TraceAggregator;
-import net.explorviz.trace.util.PerformanceLogger;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -95,8 +94,6 @@ public class SpanPersistingStream {
   }
 
   private Topology buildTopology() {
-    PerformanceLogger pfLogger = PerformanceLogger.newOperationPerformanceLogger(
-        LOGGER, 100, "Saved {} spans in {}ms");
 
     final StreamsBuilder builder = new StreamsBuilder();
 
@@ -122,22 +119,21 @@ public class SpanPersistingStream {
         traceTable.toStream().selectKey((k, v) -> v.getLandscapeToken() + "::" + k);
 
     traceStream.foreach((k, t) -> {
-          try {
-            repository.saveTraceAsync(t);
-            pfLogger.logOperation();
-          } catch (PersistingException e) {
-            // TODO: How to handle these spans? Enqueue somewhere for retries?
-            if (LOGGER.isErrorEnabled()) {
-              LOGGER.error("A span was not persisted: {0}", e);
-            }
-          }
-        });
+      try {
+        repository.saveTraceAsync(t);
+      } catch (PersistingException e) {
+        // TODO: How to handle these spans? Enqueue somewhere for retries?
+        if (LOGGER.isErrorEnabled()) {
+          LOGGER.error("A span was not persisted: {0}", e);
+        }
+      }
+    });
 
     return builder.build();
   }
 
   /**
-   * Creates a {@link Serde} for specific avro records using the {@link SpecificAvroSerde}
+   * Creates a {@link Serde} for specific avro records using the {@link SpecificAvroSerde}.
    *
    * @param forKey {@code true} if the Serde is for keys, {@code false} otherwise
    * @param <T>    type of the avro record

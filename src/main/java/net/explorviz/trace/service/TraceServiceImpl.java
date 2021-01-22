@@ -3,7 +3,6 @@ package net.explorviz.trace.service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -15,6 +14,9 @@ import net.explorviz.trace.persistence.SpanRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Provides method for accessing traces.
+ */
 @Singleton
 public class TraceServiceImpl implements TraceService {
 
@@ -41,7 +43,7 @@ public class TraceServiceImpl implements TraceService {
         result = Optional.of(built);
       } catch (IllegalArgumentException e) {
         if (LOGGER.isErrorEnabled()) {
-          LOGGER.error("Could not build a trace: {0}", e);
+          LOGGER.error("Could not build a trace: {0}", e); // NOCS
         }
       }
     }
@@ -55,12 +57,12 @@ public class TraceServiceImpl implements TraceService {
 
     List<Trace> traces = new ArrayList<>(spanSets.size());
 
-    for (Set<SpanDynamic> spans: spanSets) {
+    for (Set<SpanDynamic> spans : spanSets) {
       try {
         Trace t = builder.build(spans);
         t.setLandscapeToken(landscapeToken);
         traces.add(t);
-      }catch (IllegalArgumentException e) {
+      } catch (IllegalArgumentException e) {
         if (LOGGER.isErrorEnabled()) {
           LOGGER.error("Could not build a trace: {0}", e);
         }

@@ -5,7 +5,12 @@ import net.explorviz.avro.SpanDynamic;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.streams.processor.TimestampExtractor;
 
-public class EVSpanTimestampKafkaExtractor implements TimestampExtractor {
+/**
+ * Timestamp extractor for spans. Uses the start time of a spans as the record's timestamp
+ * used for windowing.
+ */
+public class SpanTimestampKafkaExtractor implements TimestampExtractor {
+
 
   @Override
   public long extract(final ConsumerRecord<Object, Object> record, final long previousTimestamp) {

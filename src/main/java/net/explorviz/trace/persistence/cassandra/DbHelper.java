@@ -26,16 +26,16 @@ import org.slf4j.LoggerFactory;
  * to using it. In essence this creates the the table `spans` with the following schema
  *
  * <pre>
- *   LandscapeToken* | Timestamp' | TraceId' | Set<SpanDynamic>
+ *   LandscapeToken* | Timestamp' | TraceId' | Set&lt;SpanDynamic&gt;
  * </pre>
  */
 @Singleton
-public class DBHelper {
+public class DbHelper {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DBHelper.class);
+
 
   public static final String KEYSPACE_NAME = "explorviz";
-  public static final String TABLE_SPANS = "spans";
+  public static final String TABLE_SPANS = "spans"; // NOCS
 
 
   public static final String TYPE_TIMESTAMP = "ctimestamp";
@@ -49,7 +49,6 @@ public class DBHelper {
   public static final String COL_TIMESTAMP_NANO = "nano_adjust";
 
   public static final String COL_TIMESTAMP = "start_time";
-  public static final String COL_END_TIME = "end_time";
 
   public static final String COL_SPAN_ID = "span_id";
   public static final String COL_SPAN_TRACE_ID = "span_trace_id";
@@ -59,17 +58,15 @@ public class DBHelper {
   public static final String COL_SPAN_HASH = "span_hash";
 
 
-  public static final String COL_SPANS = "spans";
+  public static final String COL_SPANS = "spans"; // NOCS
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(DbHelper.class);
 
 
   private final CqlSession dbSession;
 
-  /**
-   * @param session the CqlSession
-   */
   @Inject
-  public DBHelper(final CqlSession session) {
+  public DbHelper(final CqlSession session) {
     this.dbSession = session;
   }
 
@@ -140,17 +137,17 @@ public class DBHelper {
 
 
     // Create index on start time for efficient range queries
-    final CreateIndex createTSIndex = SchemaBuilder.createIndex("timestamp_index")
+    final CreateIndex createTimestampIndex = SchemaBuilder.createIndex("timestamp_index")
         .ifNotExists()
         .onTable(KEYSPACE_NAME, TABLE_SPANS)
         .andColumn(COL_TIMESTAMP);
-    
+
 
 
     this.dbSession.execute(createTimestampUdt.asCql());
     this.dbSession.execute(createSpanUdt.asCql());
     this.dbSession.execute(createTraceTable.asCql());
-    this.dbSession.execute(createTSIndex.asCql());
+    this.dbSession.execute(createTimestampIndex.asCql());
 
     if (LOGGER.isInfoEnabled()) {
       LOGGER.info("Created trace table and associated types");

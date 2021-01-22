@@ -6,6 +6,10 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import io.quarkus.jackson.ObjectMapperCustomizer;
 import javax.inject.Singleton;
 
+/**
+ * Jackson object mapper settings. Disables serialization of getters/setters and only relies on
+ * field.
+ */
 @Singleton
 public class RegisterCustomModuleCustomizer implements ObjectMapperCustomizer {
 
