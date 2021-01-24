@@ -6,8 +6,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.streams.processor.TimestampExtractor;
 
 /**
- * Timestamp extractor for spans. Uses the start time of a spans as the record's timestamp
- * used for windowing.
+ * Timestamp extractor for spans. Uses the start time of a spans as the record's timestamp used for
+ * windowing.
  */
 public class SpanTimestampKafkaExtractor implements TimestampExtractor {
 

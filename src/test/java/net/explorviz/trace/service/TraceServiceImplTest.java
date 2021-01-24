@@ -2,7 +2,6 @@ package net.explorviz.trace.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
@@ -17,6 +16,7 @@ import net.explorviz.trace.TraceHelper;
 import net.explorviz.trace.persistence.SpanRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Matchers;
 import org.mockito.Mockito;
 
 class TraceServiceImplTest {
@@ -28,34 +28,37 @@ class TraceServiceImplTest {
 
   @BeforeEach
   void setUp() {
-    repo = Mockito.mock(SpanRepository.class);
-    builder = new TraceBuilderImpl();
-    service = new TraceServiceImpl(repo, builder);
+    this.repo = Mockito.mock(SpanRepository.class);
+    this.builder = new TraceBuilderImpl();
+    this.service = new TraceServiceImpl(this.repo, this.builder);
   }
 
   @Test
   void getById() {
-    int spanAmount = 10;
-    Trace testTrace = TraceHelper.randomTrace(spanAmount);
-    Mockito.when(repo.getSpans(testTrace.getLandscapeToken(), testTrace.getTraceId()))
+    final int spanAmount = 10;
+    final Trace testTrace = TraceHelper.randomTrace(spanAmount);
+    Mockito.when(this.repo.getSpans(testTrace.getLandscapeToken(), testTrace.getTraceId()))
         .thenReturn(Optional.of(testTrace.getSpanList()));
 
-    Trace got =
-        service.getById(testTrace.getLandscapeToken(), testTrace.getTraceId()).orElseThrow();
+    final Trace got =
+        this.service.getById(testTrace.getLandscapeToken(), testTrace.getTraceId()).orElseThrow();
 
     assertEquals(testTrace, got);
   }
 
   @Test
   void getUnknownId() {
-    int spanAmount = 10;
-    Trace testTrace = TraceHelper.randomTrace(spanAmount);
-    Mockito.when(repo.getSpans(testTrace.getLandscapeToken(), testTrace.getTraceId()))
+    final int spanAmount = 10;
+    final Trace testTrace = TraceHelper.randomTrace(spanAmount);
+    Mockito.when(this.repo.getSpans(testTrace.getLandscapeToken(), testTrace.getTraceId()))
         .thenReturn(Optional.of(testTrace.getSpanList()));
-    Mockito.when(repo.getSpans(Mockito.anyString(), Mockito.anyString())).thenReturn(Optional.empty());
+    Mockito.when(this.repo.getSpans(Matchers.anyString(), Matchers.anyString()))
+        .thenReturn(Optional.empty());
 
-    Optional<Trace> gotUnknownToken = service.getById("sometoken", testTrace.getTraceId());
-    Optional<Trace> gotUnknownTraceId = service.getById(testTrace.getLandscapeToken(), "someid");
+    final Optional<Trace> gotUnknownToken =
+        this.service.getById("sometoken", testTrace.getTraceId());
+    final Optional<Trace> gotUnknownTraceId =
+        this.service.getById(testTrace.getLandscapeToken(), "someid");
 
     assertTrue(gotUnknownToken.isEmpty());
     assertTrue(gotUnknownTraceId.isEmpty());
@@ -63,35 +66,35 @@ class TraceServiceImplTest {
 
   @Test
   void getBetween() {
-    int spanAmount = 10;
+    final int spanAmount = 10;
     // Create 4 traces of the same token in the temporal order
     // t4, t1, t2, t3
-    String token = "token";
-    Instant now = Instant.now();
-    Trace t1 = TraceHelper.randomTrace(spanAmount);
+    final String token = "token";
+    final Instant now = Instant.now();
+    final Trace t1 = TraceHelper.randomTrace(spanAmount);
     t1.setLandscapeToken(token);
     t1.setStartTime(TimestampHelper.toTimestamp(now.minus(10, ChronoUnit.SECONDS)));
-    Trace t2 = TraceHelper.randomTrace(spanAmount);
+    final Trace t2 = TraceHelper.randomTrace(spanAmount);
     t2.setLandscapeToken(token);
     t2.setStartTime(TimestampHelper.toTimestamp(now.minus(5, ChronoUnit.SECONDS)));
-    Trace t3 = TraceHelper.randomTrace(spanAmount);
+    final Trace t3 = TraceHelper.randomTrace(spanAmount);
     t3.setLandscapeToken(token);
     t3.setStartTime(TimestampHelper.toTimestamp(now));
-    Trace t4 = TraceHelper.randomTrace(spanAmount);
+    final Trace t4 = TraceHelper.randomTrace(spanAmount);
     t4.setLandscapeToken(token);
     t4.setStartTime(TimestampHelper.toTimestamp(now.minus(20, ChronoUnit.SECONDS)));
 
-    Set<Trace> traces = new HashSet<>(Arrays.asList(t1, t2, t3, t4));
+    final Set<Trace> traces = new HashSet<>(Arrays.asList(t1, t2, t3, t4));
     // Add random traces
     for (int i = 0; i < 0; i++) {
       traces.add(TraceHelper.randomTrace(spanAmount));
     }
 
-    Mockito.when(repo.getAllInRange(Mockito.anyString(), Mockito.any(), Mockito.any()))
+    Mockito.when(this.repo.getAllInRange(Matchers.anyString(), Matchers.any(), Matchers.any()))
         .thenAnswer(i -> {
-          String tok = i.getArgumentAt(0, String.class);
-          Timestamp from = TimestampHelper.toTimestamp(i.getArgumentAt(1, Instant.class));
-          Timestamp to = TimestampHelper.toTimestamp(i.getArgumentAt(2, Instant.class));
+          final String tok = i.getArgumentAt(0, String.class);
+          final Timestamp from = TimestampHelper.toTimestamp(i.getArgumentAt(1, Instant.class));
+          final Timestamp to = TimestampHelper.toTimestamp(i.getArgumentAt(2, Instant.class));
           return traces.stream()
               .filter(t -> t.getLandscapeToken().equals(tok))
               .filter(t -> TimestampHelper.isAfterOrEqual(t.getStartTime(), from))
@@ -101,8 +104,8 @@ class TraceServiceImplTest {
         });
 
     // Query for t2, t3
-    Collection<Trace> rangeQuery =
-        service.getBetween(token, TimestampHelper.toInstant(t2.getStartTime()),
+    final Collection<Trace> rangeQuery =
+        this.service.getBetween(token, TimestampHelper.toInstant(t2.getStartTime()),
             TimestampHelper.toInstant(t3.getStartTime()));
 
     assertEquals(2, rangeQuery.size());

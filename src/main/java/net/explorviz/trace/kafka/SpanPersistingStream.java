@@ -36,9 +36,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Contains a Kafka Streams topology that ingests {@link SpanDynamic} from a topic and aggregates
- * spans that belong to a the same trace in a {@link Trace} object.
- * The later contains a list of said spans as well as meta information, e.g., the landscape token.
- * The resulting traces are persisted in a cassandra db.
+ * spans that belong to a the same trace in a {@link Trace} object. The later contains a list of
+ * said spans as well as meta information, e.g., the landscape token. The resulting traces are
+ * persisted in a cassandra db.
  */
 @ApplicationScoped
 public class SpanPersistingStream {
@@ -56,12 +56,12 @@ public class SpanPersistingStream {
 
   private KafkaStreams streams;
 
-  private SpanRepository repository;
+  private final SpanRepository repository;
 
   @Inject
   public SpanPersistingStream(final SchemaRegistryClient schemaRegistryClient,
-                              final KafkaConfig config,
-                              final SpanRepository repository) {
+      final KafkaConfig config,
+      final SpanRepository repository) {
 
     this.registryClient = schemaRegistryClient;
     this.config = config;
@@ -73,13 +73,13 @@ public class SpanPersistingStream {
 
   }
 
-  void onStart(@Observes final StartupEvent event) {
+  /* default */ void onStart(@Observes final StartupEvent event) { // NOPMD
     this.streams = new KafkaStreams(this.topology, this.streamsConfig);
     this.streams.cleanUp();
     this.streams.start();
   }
 
-  void onStop(@Observes final ShutdownEvent event) {
+  /* default */ void onStop(@Observes final ShutdownEvent event) { // NOPMD
     this.streams.close();
   }
 
@@ -100,28 +100,28 @@ public class SpanPersistingStream {
     final KStream<String, SpanDynamic> spanStream = builder.stream(this.config.getInTopic(),
         Consumed.with(Serdes.String(), this.getAvroSerde(false)));
 
-    TimeWindows traceWindow =
+    final TimeWindows traceWindow =
         TimeWindows.of(Duration.ofMillis(WINDOW_SIZE_MS)).grace(Duration.ofMillis(GRACE_MS));
 
-    TraceAggregator aggregator = new TraceAggregator();
+    final TraceAggregator aggregator = new TraceAggregator();
 
     // Group by landscapeToken::TraceId
-    KTable<Windowed<String>, Trace> traceTable =
+    final KTable<Windowed<String>, Trace> traceTable =
         spanStream.groupBy((k, v) -> v.getLandscapeToken() + "::" + v.getTraceId(),
-            Grouped.with(Serdes.String(), getAvroSerde(false)))
+            Grouped.with(Serdes.String(), this.getAvroSerde(false)))
             .windowedBy(traceWindow)
             .aggregate(Trace::new,
                 (key, value, aggregate) -> aggregator.aggregate(aggregate, value),
                 Materialized.with(Serdes.String(), this.getAvroSerde(false)))
             .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()));
 
-    KStream<String, Trace> traceStream =
+    final KStream<String, Trace> traceStream =
         traceTable.toStream().selectKey((k, v) -> v.getLandscapeToken() + "::" + k);
 
     traceStream.foreach((k, t) -> {
       try {
-        repository.saveTraceAsync(t);
-      } catch (PersistingException e) {
+        this.repository.saveTraceAsync(t);
+      } catch (final PersistingException e) {
         // TODO: How to handle these spans? Enqueue somewhere for retries?
         if (LOGGER.isErrorEnabled()) {
           LOGGER.error("A span was not persisted: {0}", e);
@@ -136,7 +136,7 @@ public class SpanPersistingStream {
    * Creates a {@link Serde} for specific avro records using the {@link SpecificAvroSerde}.
    *
    * @param forKey {@code true} if the Serde is for keys, {@code false} otherwise
-   * @param <T>    type of the avro record
+   * @param <T> type of the avro record
    * @return a Serde
    */
   private <T extends SpecificRecord> SpecificAvroSerde<T> getAvroSerde(final boolean forKey) {

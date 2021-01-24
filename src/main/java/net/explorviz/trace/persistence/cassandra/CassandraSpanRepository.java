@@ -53,13 +53,13 @@ public class CassandraSpanRepository implements SpanRepository {
 
 
   @Override
-  public void insert(SpanDynamic span) throws PersistingException {
+  public void insert(final SpanDynamic span) throws PersistingException {
     try {
       // Try to append span to the set of spans corresponding the trace id and token
       // This fails if the row does not exists
-      if (!appendSpan(span)) {
+      if (!this.appendSpan(span)) {
         // Row for this trace id and token does not exist, create it with the single span
-        createNew(span);
+        this.createNew(span);
       }
     } catch (final AllNodesFailedException e) {
       if (LOGGER.isErrorEnabled()) {
@@ -74,27 +74,27 @@ public class CassandraSpanRepository implements SpanRepository {
     }
   }
 
-  private SimpleStatement buildInsertTraceStatement(Trace trace) {
-    long timestamp = TimestampHelper.toInstant(trace.getStartTime()).toEpochMilli();
-    Set<SpanDynamic> spanSet = new HashSet<>(trace.getSpanList());
+  private SimpleStatement buildInsertTraceStatement(final Trace trace) {
+    final long timestamp = TimestampHelper.toInstant(trace.getStartTime()).toEpochMilli();
+    final Set<SpanDynamic> spanSet = new HashSet<>(trace.getSpanList());
     return QueryBuilder.insertInto(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
         .value(DbHelper.COL_TOKEN, QueryBuilder.literal(trace.getLandscapeToken()))
         .value(DbHelper.COL_TIMESTAMP, QueryBuilder.literal(timestamp))
         .value(DbHelper.COL_TRACE_ID, QueryBuilder.literal(trace.getTraceId()))
-        .value(DbHelper.COL_SPANS, QueryBuilder.literal(spanSet, db.getCodecRegistry()))
+        .value(DbHelper.COL_SPANS, QueryBuilder.literal(spanSet, this.db.getCodecRegistry()))
         .build();
   }
 
   @Override
   public void saveTrace(final Trace trace) throws PersistingException {
-    SimpleStatement insertStmt = buildInsertTraceStatement(trace);
+    final SimpleStatement insertStmt = this.buildInsertTraceStatement(trace);
     this.db.getSession().execute(insertStmt);
   }
 
   @Override
   public CompletionStage<AsyncResultSet> saveTraceAsync(final Trace trace)
       throws PersistingException {
-    SimpleStatement insertStmt = buildInsertTraceStatement(trace);
+    final SimpleStatement insertStmt = this.buildInsertTraceStatement(trace);
     return this.db.getSession().executeAsync(insertStmt);
   }
 
@@ -104,15 +104,16 @@ public class CassandraSpanRepository implements SpanRepository {
    *
    * @param span the span to add
    */
-  private void createNew(SpanDynamic span) {
+  private void createNew(final SpanDynamic span) {
 
-    long timestamp = TimestampHelper.toInstant(span.getStartTime()).toEpochMilli();
+    final long timestamp = TimestampHelper.toInstant(span.getStartTime()).toEpochMilli();
     final SimpleStatement insertStmt =
         QueryBuilder.insertInto(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
             .value(DbHelper.COL_TOKEN, QueryBuilder.literal(span.getLandscapeToken()))
             .value(DbHelper.COL_TIMESTAMP, QueryBuilder.literal(timestamp))
             .value(DbHelper.COL_TRACE_ID, QueryBuilder.literal(span.getTraceId()))
-            .value(DbHelper.COL_SPANS, QueryBuilder.literal(Set.of(span), db.getCodecRegistry()))
+            .value(DbHelper.COL_SPANS,
+                QueryBuilder.literal(Set.of(span), this.db.getCodecRegistry()))
             .build();
     this.db.getSession().execute(insertStmt);
   }
@@ -123,10 +124,11 @@ public class CassandraSpanRepository implements SpanRepository {
    * @param span span to append to set of spans with the same trace id
    * @return true iff the update was successful, false if the corresponding row does not exists
    */
-  private boolean appendSpan(SpanDynamic span) {
+  private boolean appendSpan(final SpanDynamic span) {
     final SimpleStatement updateStmt =
         QueryBuilder.update(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
-            .appendSetElement(DbHelper.COL_SPANS, QueryBuilder.literal(span, db.getCodecRegistry()))
+            .appendSetElement(DbHelper.COL_SPANS,
+                QueryBuilder.literal(span, this.db.getCodecRegistry()))
             .whereColumn(DbHelper.COL_TOKEN)
             .isEqualTo(QueryBuilder.literal(span.getLandscapeToken()))
             .whereColumn(DbHelper.COL_TRACE_ID).isEqualTo(QueryBuilder.literal(span.getTraceId()))
@@ -139,23 +141,24 @@ public class CassandraSpanRepository implements SpanRepository {
 
   @Override
   public Optional<Collection<SpanDynamic>> getSpans(final String landscapeToken,
-                                                    final String traceId) {
+      final String traceId) {
 
-    SimpleStatement findStmt = QueryBuilder.selectFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
-        .column(DbHelper.COL_SPANS)
-        .whereColumn(DbHelper.COL_TOKEN).isEqualTo(QueryBuilder.literal(landscapeToken))
-        .whereColumn(DbHelper.COL_TRACE_ID).isEqualTo(QueryBuilder.literal(traceId))
-        .build().setTracing(true);
-    ResultSet queryResult = this.db.getSession().execute(findStmt);
-    ExecutionInfo exInfo = queryResult.getExecutionInfo();
+    final SimpleStatement findStmt =
+        QueryBuilder.selectFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
+            .column(DbHelper.COL_SPANS)
+            .whereColumn(DbHelper.COL_TOKEN).isEqualTo(QueryBuilder.literal(landscapeToken))
+            .whereColumn(DbHelper.COL_TRACE_ID).isEqualTo(QueryBuilder.literal(traceId))
+            .build().setTracing(true);
+    final ResultSet queryResult = this.db.getSession().execute(findStmt); // NOPMD
+    final ExecutionInfo exInfo = queryResult.getExecutionInfo();
 
-    Row result = queryResult.one();
+    final Row result = queryResult.one();
     if (result == null) {
       return Optional.empty();
     } else {
-      Set<SpanDynamic> spans = result.getSet(DbHelper.COL_SPANS, SpanDynamic.class);
+      final Set<SpanDynamic> spans = result.getSet(DbHelper.COL_SPANS, SpanDynamic.class);
       exInfo.getQueryTraceAsync().thenAccept(t -> {
-        Duration d = Duration.of(t.getDurationMicros(), ChronoUnit.MICROS);
+        final Duration d = Duration.of(t.getDurationMicros(), ChronoUnit.MICROS);
         LOGGER.info("Fetched {} spans in {}ms", spans.size(), d.toMillis());
       });
       return Optional.ofNullable(spans);
@@ -163,9 +166,9 @@ public class CassandraSpanRepository implements SpanRepository {
   }
 
   @Override
-  public List<Set<SpanDynamic>> getAllInRange(String landscapeToken, final Instant from,
-                                              final Instant to) {
-    SimpleStatement findAllStmt =
+  public List<Set<SpanDynamic>> getAllInRange(final String landscapeToken, final Instant from,
+      final Instant to) {
+    final SimpleStatement findAllStmt =
         QueryBuilder.selectFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
             .column(DbHelper.COL_SPANS)
             .whereColumn(DbHelper.COL_TOKEN).isEqualTo(QueryBuilder.literal(landscapeToken))
@@ -173,18 +176,18 @@ public class CassandraSpanRepository implements SpanRepository {
             .whereColumn(DbHelper.COL_TIMESTAMP).isLessThanOrEqualTo(QueryBuilder.literal(to))
             .allowFiltering()
             .build();
-    ResultSet queryResults = this.db.getSession().execute(findAllStmt);
-    ExecutionInfo exInfo = queryResults.getExecutionInfo();
+    final ResultSet queryResults = this.db.getSession().execute(findAllStmt); // NOPMD
+    final ExecutionInfo exInfo = queryResults.getExecutionInfo();
 
-    List<Set<SpanDynamic>> traces = new ArrayList<>();
+    final List<Set<SpanDynamic>> traces = new ArrayList<>();
     queryResults.forEach(r -> {
-      Optional<Set<SpanDynamic>> possibleSpans =
+      final Optional<Set<SpanDynamic>> possibleSpans =
           Optional.ofNullable(r.getSet(DbHelper.COL_SPANS, SpanDynamic.class));
       possibleSpans.ifPresent(traces::add);
     });
     exInfo.getQueryTraceAsync().thenAccept(t -> {
-      Duration d = Duration.of(t.getDurationMicros(), ChronoUnit.MICROS);
-      long count = traces.stream().mapToInt(Set::size).count();
+      final Duration d = Duration.of(t.getDurationMicros(), ChronoUnit.MICROS);
+      final long count = traces.stream().mapToInt(Set::size).count();
       LOGGER.info("Fetched {} spans ({} traces) in {}ms", count, traces.size(), d.toMillis());
     });
     return traces;
@@ -192,11 +195,11 @@ public class CassandraSpanRepository implements SpanRepository {
 
   @Override
   public void deleteAll(final String landscapeToken) {
-    String deletionQuery =
+    final String deletionQuery =
         QueryBuilder.deleteFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
             .whereColumn(DbHelper.COL_TOKEN).isEqualTo(QueryBuilder.literal(landscapeToken))
             .asCql();
-    db.getSession().execute(deletionQuery);
+    this.db.getSession().execute(deletionQuery);
   }
 
 

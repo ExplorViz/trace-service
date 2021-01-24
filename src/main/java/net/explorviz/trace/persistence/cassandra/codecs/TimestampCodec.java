@@ -15,8 +15,7 @@ public class TimestampCodec extends MappingCodec<UdtValue, Timestamp> {
 
   /**
    * Creates a new mapping codec providing support for {@link Timestamp} based on an existing codec
-   * for
-   * {@code InnerT}.
+   * for {@code InnerT}.
    *
    * @param innerCodec The inner codec to use to handle instances of InnerT; must not be null.
    */
@@ -26,15 +25,15 @@ public class TimestampCodec extends MappingCodec<UdtValue, Timestamp> {
 
   @Override
   public Timestamp innerToOuter(final UdtValue value) {
-    Long seconds = value.getLong(DbHelper.COL_TIMESTAMP_SECONDS);
-    Integer nanoAdjust = value.getInt(DbHelper.COL_TIMESTAMP_NANO);
+    final Long seconds = value.getLong(DbHelper.COL_TIMESTAMP_SECONDS);
+    final Integer nanoAdjust = value.getInt(DbHelper.COL_TIMESTAMP_NANO);
     return new Timestamp(seconds, nanoAdjust);
   }
 
 
   @Override
   public UdtValue outerToInner(final Timestamp value) {
-    UdtValue udtValue = ((UserDefinedType) getCqlType()).newValue();
+    final UdtValue udtValue = ((UserDefinedType) this.getCqlType()).newValue();
     udtValue.setLong(DbHelper.COL_TIMESTAMP_SECONDS, value.getSeconds());
     udtValue.setInt(DbHelper.COL_TIMESTAMP_NANO, value.getNanoAdjust());
     return udtValue;

@@ -18,13 +18,12 @@ public class SpanCodec extends MappingCodec<UdtValue, SpanDynamic> {
 
   /**
    * Creates a new mapping codec providing support for {@link SpanDynamic} based on an existing
-   * codec for
-   * {@code InnerT}.
+   * codec for {@code InnerT}.
    *
    * @param innerCodec The inner codec to use to handle instances of InnerT; must not be null.
    */
   public SpanCodec(final TypeCodec<UdtValue> innerCodec,
-                   final TimestampCodec timestampCodec) {
+      final TimestampCodec timestampCodec) {
     super(innerCodec, GenericType.of(SpanDynamic.class));
     this.timestampTypeCodec = timestampCodec;
   }
@@ -33,9 +32,10 @@ public class SpanCodec extends MappingCodec<UdtValue, SpanDynamic> {
   protected SpanDynamic innerToOuter(final UdtValue value) {
 
 
-    Timestamp start =
-        timestampTypeCodec.innerToOuter(value.getUdtValue(DbHelper.COL_SPAN_START_TIME));
-    Timestamp end = timestampTypeCodec.innerToOuter(value.getUdtValue(DbHelper.COL_SPAN_END_TIME));
+    final Timestamp start =
+        this.timestampTypeCodec.innerToOuter(value.getUdtValue(DbHelper.COL_SPAN_START_TIME));
+    final Timestamp end =
+        this.timestampTypeCodec.innerToOuter(value.getUdtValue(DbHelper.COL_SPAN_END_TIME));
 
     return SpanDynamic.newBuilder()
         .setTraceId(value.getString(DbHelper.COL_SPAN_TRACE_ID))
@@ -53,11 +53,11 @@ public class SpanCodec extends MappingCodec<UdtValue, SpanDynamic> {
   @Override
   public UdtValue outerToInner(final SpanDynamic value) {
 
-    UdtValue udtValue = ((UserDefinedType) getCqlType()).newValue();
+    final UdtValue udtValue = ((UserDefinedType) this.getCqlType()).newValue();
 
 
-    UdtValue start = timestampTypeCodec.outerToInner(value.getStartTime());
-    UdtValue end = timestampTypeCodec.outerToInner(value.getEndTime());
+    final UdtValue start = this.timestampTypeCodec.outerToInner(value.getStartTime());
+    final UdtValue end = this.timestampTypeCodec.outerToInner(value.getEndTime());
 
     udtValue.setString(DbHelper.COL_SPAN_TRACE_ID, value.getTraceId());
     udtValue.setString(DbHelper.COL_SPAN_ID, value.getSpanId());

@@ -102,8 +102,7 @@ public class DbHelper {
 
   /**
    * Creates the table "traces" which holds all {@link net.explorviz.avro.Trace} objects. No-op if
-   * this
-   * table already exists.
+   * this table already exists.
    */
   private void createSpansTable() {
 

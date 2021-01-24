@@ -34,14 +34,15 @@ public class TraceServiceImpl implements TraceService {
   @Override
   public Optional<Trace> getById(final String landscapeToken, final String traceId) {
     Optional<Trace> result = Optional.empty();
-    Optional<Collection<SpanDynamic>> spans = repository.getSpans(landscapeToken, traceId);
+    final Optional<Collection<SpanDynamic>> spans =
+        this.repository.getSpans(landscapeToken, traceId);
     if (spans.isPresent()) {
       try {
-        Trace built = builder.build(spans.get());
+        final Trace built = this.builder.build(spans.get());
         // Set token for trace here as the spans do not contain it
         built.setLandscapeToken(landscapeToken);
         result = Optional.of(built);
-      } catch (IllegalArgumentException e) {
+      } catch (final IllegalArgumentException e) {
         if (LOGGER.isErrorEnabled()) {
           LOGGER.error("Could not build a trace: {0}", e); // NOCS
         }
@@ -52,17 +53,17 @@ public class TraceServiceImpl implements TraceService {
 
   @Override
   public Collection<Trace> getBetween(final String landscapeToken, final Instant from,
-                                      final Instant to) {
-    List<Set<SpanDynamic>> spanSets = repository.getAllInRange(landscapeToken, from, to);
+      final Instant to) {
+    final List<Set<SpanDynamic>> spanSets = this.repository.getAllInRange(landscapeToken, from, to);
 
-    List<Trace> traces = new ArrayList<>(spanSets.size());
+    final List<Trace> traces = new ArrayList<>(spanSets.size());
 
-    for (Set<SpanDynamic> spans : spanSets) {
+    for (final Set<SpanDynamic> spans : spanSets) {
       try {
-        Trace t = builder.build(spans);
+        final Trace t = this.builder.build(spans);
         t.setLandscapeToken(landscapeToken);
         traces.add(t);
-      } catch (IllegalArgumentException e) {
+      } catch (final IllegalArgumentException e) {
         if (LOGGER.isErrorEnabled()) {
           LOGGER.error("Could not build a trace: {0}", e);
         }
@@ -73,7 +74,7 @@ public class TraceServiceImpl implements TraceService {
 
   @Override
   public void deleteAll(final String landscapeToken) {
-    repository.deleteAll(landscapeToken);
+    this.repository.deleteAll(landscapeToken);
   }
 
 

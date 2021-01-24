@@ -24,68 +24,69 @@ class CassandraSpanRepositoryTest extends CassandraTest {
 
   @BeforeEach
   void setUp() {
-    repo = new CassandraSpanRepository(this.db);
+    this.repo = new CassandraSpanRepository(this.db);
   }
 
+  @Override
   @AfterEach
-  void tearDown() {
-  }
+  void tearDown() {}
 
   @Test
   void insertSingle() throws PersistingException {
-    SpanDynamic testSpan = TraceHelper.randomSpan();
-    repo.insert(testSpan);
+    final SpanDynamic testSpan = TraceHelper.randomSpan();
+    this.repo.insert(testSpan);
 
-    String getInserted = QueryBuilder.selectFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
+    final String getInserted = QueryBuilder.selectFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
         .all()
         .whereColumn(DbHelper.COL_TOKEN)
         .isEqualTo(QueryBuilder.literal(testSpan.getLandscapeToken()))
         .whereColumn(DbHelper.COL_TRACE_ID).isEqualTo(QueryBuilder.literal(testSpan.getTraceId()))
         .asCql();
-    List<Row> results = db.getSession().execute(getInserted).all();
+    final List<Row> results = this.db.getSession().execute(getInserted).all();
 
     testSpan.setLandscapeToken(""); // Not persisted, do not compare
 
-    Set<SpanDynamic> got = results.get(0).getSet(DbHelper.COL_SPANS, SpanDynamic.class);
+    final Set<SpanDynamic> got = results.get(0).getSet(DbHelper.COL_SPANS, SpanDynamic.class);
     Assertions.assertEquals(1, got.size());
     Assertions.assertEquals(testSpan, got.stream().findAny().get());
   }
 
   @Test
   void saveTraceAsync() throws PersistingException {
-    Trace t = TraceHelper.randomTrace(20);
+    final Trace t = TraceHelper.randomTrace(20);
 
-    repo.saveTraceAsync(t).toCompletableFuture().join();
-    Collection<SpanDynamic> got = repo.getSpans(t.getLandscapeToken(), t.getTraceId()).orElseThrow();
+    this.repo.saveTraceAsync(t).toCompletableFuture().join();
+    final Collection<SpanDynamic> got =
+        this.repo.getSpans(t.getLandscapeToken(), t.getTraceId()).orElseThrow();
     Assertions.assertEquals(20, got.size());
   }
 
   @Test
   void insertSingleTrace() throws PersistingException {
     final int spansPerTrace = 20;
-    Trace testTrace = TraceHelper.randomTrace(spansPerTrace);
+    final Trace testTrace = TraceHelper.randomTrace(spansPerTrace);
 
-    for (SpanDynamic s : testTrace.getSpanList()) {
-      repo.insert(s);
+    for (final SpanDynamic s : testTrace.getSpanList()) {
+      this.repo.insert(s);
     }
 
-    String getInserted = QueryBuilder.selectFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
+    final String getInserted = QueryBuilder.selectFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
         .all()
         .whereColumn(DbHelper.COL_TOKEN)
         .isEqualTo(QueryBuilder.literal(testTrace.getLandscapeToken()))
         .whereColumn(DbHelper.COL_TRACE_ID).isEqualTo(QueryBuilder.literal(testTrace.getTraceId()))
         .asCql();
-    List<Row> results = db.getSession().execute(getInserted).all();
+    final List<Row> results = this.db.getSession().execute(getInserted).all();
 
     // Only one trace was created
     Assertions.assertEquals(1, results.size());
-    Set<SpanDynamic> got = results.get(0).getSet(DbHelper.COL_SPANS, SpanDynamic.class);
+    final Set<SpanDynamic> got = results.get(0).getSet(DbHelper.COL_SPANS, SpanDynamic.class);
 
-    List<SpanDynamic> expected = new ArrayList<>(testTrace.getSpanList());
+    final List<SpanDynamic> expected = new ArrayList<>(testTrace.getSpanList());
     expected.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
     expected.forEach(s -> s.setLandscapeToken("")); // Not persisted, do not compare
 
-    List<SpanDynamic> gotList = new ArrayList<>(got);
+    final List<SpanDynamic> gotList = new ArrayList<>(got);
     gotList.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
 
 
@@ -99,23 +100,23 @@ class CassandraSpanRepositoryTest extends CassandraTest {
     final int traceAmount = 20;
 
     for (int i = 0; i < traceAmount; i++) {
-      Trace testTrace = TraceHelper.randomTrace(spansPerTraces);
-      for (SpanDynamic s : testTrace.getSpanList()) {
-        repo.insert(s);
+      final Trace testTrace = TraceHelper.randomTrace(spansPerTraces);
+      for (final SpanDynamic s : testTrace.getSpanList()) {
+        this.repo.insert(s);
       }
     }
 
-    String getInserted = QueryBuilder.selectFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
+    final String getInserted = QueryBuilder.selectFrom(DbHelper.KEYSPACE_NAME, DbHelper.TABLE_SPANS)
         .all()
         .asCql();
-    List<Row> results = db.getSession().execute(getInserted).all();
+    final List<Row> results = this.db.getSession().execute(getInserted).all();
 
     // Exactly #traceAmount traces should be in persisted
     Assertions.assertEquals(traceAmount, results.size());
 
     // Each trace should have #spansPerTraces spans
-    for (Row r : results) {
-      Set<SpanDynamic> spans = r.getSet(DbHelper.COL_SPANS, SpanDynamic.class);
+    for (final Row r : results) {
+      final Set<SpanDynamic> spans = r.getSet(DbHelper.COL_SPANS, SpanDynamic.class);
       Assertions.assertEquals(spansPerTraces, spans.size());
     }
   }
@@ -124,16 +125,18 @@ class CassandraSpanRepositoryTest extends CassandraTest {
   void findSpans() throws PersistingException {
     final int spansPerTraces = 20;
 
-    Trace testTrace = TraceHelper.randomTrace(spansPerTraces);
-    for (SpanDynamic s : testTrace.getSpanList()) {
-      repo.insert(s);
+    final Trace testTrace = TraceHelper.randomTrace(spansPerTraces);
+    for (final SpanDynamic s : testTrace.getSpanList()) {
+      this.repo.insert(s);
     }
 
-    List<SpanDynamic> got =
-        new ArrayList<>(repo.getSpans(testTrace.getLandscapeToken(), testTrace.getTraceId()).orElseThrow());
+    final List<SpanDynamic> got =
+        new ArrayList<>(
+            this.repo.getSpans(testTrace.getLandscapeToken(), testTrace.getTraceId())
+                .orElseThrow());
 
 
-    List<SpanDynamic> expected = testTrace.getSpanList();
+    final List<SpanDynamic> expected = testTrace.getSpanList();
     expected.forEach(s -> s.setLandscapeToken(""));
     expected.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
     got.sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
@@ -143,14 +146,14 @@ class CassandraSpanRepositoryTest extends CassandraTest {
   @Test
   void deleteById() {
 
-    Trace testTrace = TraceHelper.randomTrace(100);
+    final Trace testTrace = TraceHelper.randomTrace(100);
     final String token = testTrace.getLandscapeToken();
-    for (SpanDynamic s : testTrace.getSpanList()) {
-      repo.insert(s);
+    for (final SpanDynamic s : testTrace.getSpanList()) {
+      this.repo.insert(s);
     }
-    repo.deleteAll(token);
+    this.repo.deleteAll(token);
 
-    Assertions.assertFalse(repo.getSpans(token, testTrace.getTraceId()).isPresent());
+    Assertions.assertFalse(this.repo.getSpans(token, testTrace.getTraceId()).isPresent());
 
   }
 

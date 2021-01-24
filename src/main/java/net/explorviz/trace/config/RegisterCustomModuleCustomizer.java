@@ -13,7 +13,8 @@ import javax.inject.Singleton;
 @Singleton
 public class RegisterCustomModuleCustomizer implements ObjectMapperCustomizer {
 
-  public void customize(ObjectMapper mapper) {
+  @Override
+  public void customize(final ObjectMapper mapper) {
     mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
     mapper.setVisibility(mapper.getSerializationConfig().getDefaultVisibilityChecker()
         .withFieldVisibility(JsonAutoDetect.Visibility.ANY)

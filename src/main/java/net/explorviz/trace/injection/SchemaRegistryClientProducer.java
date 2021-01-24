@@ -15,13 +15,14 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 public class SchemaRegistryClientProducer {
 
   private static final int IDENTITY_MAP_CAPACITY = 10;
-  
-  @ConfigProperty(name = "explorviz.schema-registry.url")
-  String schemaRegistryUrl; //NOCS
+
+  @ConfigProperty(name = "explorviz.schema-registry.url") // NOPMD
+  /* default */ String schemaRegistryUrl; // NOCS
 
   @Produces
   @DefaultBean
   public SchemaRegistryClient schemaRegistryClient() {
-    return new CachedSchemaRegistryClient("http://" + this.schemaRegistryUrl, IDENTITY_MAP_CAPACITY);
+    return new CachedSchemaRegistryClient("http://" + this.schemaRegistryUrl,
+        IDENTITY_MAP_CAPACITY);
   }
 }

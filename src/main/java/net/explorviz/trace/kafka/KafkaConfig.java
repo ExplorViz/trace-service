@@ -7,37 +7,40 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
  * Configuration options for Kafka.
  */
 @ApplicationScoped
-// https://quarkus.io/guides/config#using-configproperties
+@SuppressWarnings("PMD.DefaultPackage")
 public class KafkaConfig {
 
   private static final Class<SpanTimestampKafkaExtractor> TIMESTAMP_EXTRACTOR =
       SpanTimestampKafkaExtractor.class;
 
-  @ConfigProperty(name = "quarkus.kafka-streams.application-id")
-  String applicationId; // NOCS
+  // CHECKSTYLE:OFF
 
+  @ConfigProperty(name = "quarkus.kafka-streams.application-id")
+  /* default */ String applicationId;
 
   @ConfigProperty(name = "quarkus.kafka-streams.bootstrap-servers")
-  String bootstrapServers; // NOCS
+  /* default */ String bootstrapServers;
 
   @ConfigProperty(name = "explorviz.kafka-streams.topics.in")
-  String inTopic; // NOCS
+  /* default */ String inTopic;
 
   @ConfigProperty(name = "explorviz.kafka-streams.topics.out")
-  String outTopic; // NOCS
+  /* default */ String outTopic;
 
   @ConfigProperty(name = "explorviz.schema-registry.url")
-  String schemaRegistryUrl; // NOCS
+  /* default */ String schemaRegistryUrl;
 
   @ConfigProperty(name = "explorviz.commit-interval-ms")
-  int commitIntervalMs; // NOCS
+  /* default */ int commitIntervalMs;
+
+  // CHECKSTYLE:ON
 
   public int getCommitIntervalMs() {
     return this.commitIntervalMs;
   }
 
   public Class<SpanTimestampKafkaExtractor> getTimestampExtractor() {
-    return this.TIMESTAMP_EXTRACTOR;
+    return KafkaConfig.TIMESTAMP_EXTRACTOR;
   }
 
   public String getApplicationId() {

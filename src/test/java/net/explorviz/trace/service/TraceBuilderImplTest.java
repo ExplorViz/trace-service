@@ -1,7 +1,7 @@
 package net.explorviz.trace.service;
 
-import static org.junit.jupiter.api.Assertions.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.ArrayDeque;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
@@ -16,41 +16,41 @@ class TraceBuilderImplTest {
 
   @BeforeEach
   void setUp() {
-    builder = new TraceBuilderImpl();
+    this.builder = new TraceBuilderImpl();
   }
 
   @Test
   void buildValid() {
-    Trace testTrace = TraceHelper.randomTrace(10);
-    Trace got = builder.build(testTrace.getSpanList());
+    final Trace testTrace = TraceHelper.randomTrace(10);
+    final Trace got = this.builder.build(testTrace.getSpanList());
 
-    testTrace.getSpanList().sort((i,j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
-    got.getSpanList().sort((i,j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
+    testTrace.getSpanList().sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
+    got.getSpanList().sort((i, j) -> StringUtils.compare(i.getSpanId(), j.getSpanId()));
     assertEquals(testTrace, got);
   }
 
   @Test
   void buildInvalidToken() {
-    Trace testTrace = TraceHelper.randomTrace(10);
-    SpanDynamic invalid = TraceHelper.randomSpan(testTrace.getTraceId(), "sometoken");
+    final Trace testTrace = TraceHelper.randomTrace(10);
+    final SpanDynamic invalid = TraceHelper.randomSpan(testTrace.getTraceId(), "sometoken");
     testTrace.getSpanList().add(invalid);
-    assertThrows(IllegalArgumentException.class, () -> builder.build(testTrace.getSpanList()));
+    assertThrows(IllegalArgumentException.class, () -> this.builder.build(testTrace.getSpanList()));
   }
 
   @Test
   void buildInvalidTraceId() {
-    Trace testTrace = TraceHelper.randomTrace(10);
-    SpanDynamic invalid = TraceHelper.randomSpan("sometraceid", testTrace.getLandscapeToken());
+    final Trace testTrace = TraceHelper.randomTrace(10);
+    final SpanDynamic invalid =
+        TraceHelper.randomSpan("sometraceid", testTrace.getLandscapeToken());
     testTrace.getSpanList().add(invalid);
-    assertThrows(IllegalArgumentException.class, () -> builder.build(testTrace.getSpanList()));
+    assertThrows(IllegalArgumentException.class, () -> this.builder.build(testTrace.getSpanList()));
   }
 
 
   @Test
   void buildEmptySpans() {
-    assertThrows(IllegalArgumentException.class, () -> builder.build(new ArrayDeque<>()));
+    assertThrows(IllegalArgumentException.class, () -> this.builder.build(new ArrayDeque<>()));
   }
-
 
 
 
