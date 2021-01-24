@@ -5,7 +5,7 @@ package net.explorviz.trace.persistence;
  */
 public class PersistingException extends RuntimeException {
 
-  private static final long serialVersionUID = 5379259515382372634L;
+  private static final long serialVersionUID = 5379259515382372634L; // NOPMD
 
   public PersistingException() {
     super();
