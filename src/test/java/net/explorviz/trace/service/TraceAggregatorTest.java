@@ -1,7 +1,7 @@
 package net.explorviz.trace.service;
 
-import static org.junit.jupiter.api.Assertions.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import net.explorviz.avro.SpanDynamic;
@@ -18,80 +18,81 @@ class TraceAggregatorTest {
 
   @BeforeEach
   void setUp() {
-    aggregator = new TraceAggregator();
+    this.aggregator = new TraceAggregator();
   }
 
   @Test
   void newTrace() {
-    Instant now = Instant.now();
-    SpanDynamic fresh = SpanDynamic.newBuilder()
+    final Instant now = Instant.now();
+    final SpanDynamic fresh = SpanDynamic.newBuilder()
         .setLandscapeToken(TEST_TOKEN)
         .setSpanId("sid")
-        .setStartTime(toTimestamp(now.minus(1, ChronoUnit.SECONDS)))
-        .setEndTime(toTimestamp(now))
+        .setStartTime(this.toTimestamp(now.minus(1, ChronoUnit.SECONDS)))
+        .setEndTime(this.toTimestamp(now))
         .setTraceId("tid")
         .setHashCode("hash")
         .build();
 
 
 
-    Trace traceWithSpan = aggregator.aggregate(new Trace(), fresh);
+    final Trace traceWithSpan = this.aggregator.aggregate(new Trace(), fresh);
 
     assertEquals(1, traceWithSpan.getSpanList().size(), "Invalid amount of spans in trace");
     assertTrue(traceWithSpan.getSpanList().contains(fresh), "Trace does not contain first span");
-    assertEquals(traceWithSpan.getStartTime(), traceWithSpan.getStartTime(), "Start time does not match");
+    assertEquals(traceWithSpan.getStartTime(), traceWithSpan.getStartTime(),
+        "Start time does not match");
     assertEquals(traceWithSpan.getEndTime(), traceWithSpan.getEndTime(), "End time does not match");
   }
 
   @Test
   void addEarlierSpan() {
-    Instant now = Instant.now();
-    SpanDynamic first = SpanDynamic.newBuilder()
+    final Instant now = Instant.now();
+    final SpanDynamic first = SpanDynamic.newBuilder()
         .setLandscapeToken(TEST_TOKEN)
-        .setStartTime(toTimestamp(now.minus(1, ChronoUnit.SECONDS)))
-        .setEndTime(toTimestamp(now))
+        .setStartTime(this.toTimestamp(now.minus(1, ChronoUnit.SECONDS)))
+        .setEndTime(this.toTimestamp(now))
         .setTraceId("tid")
         .setSpanId("sid")
         .setHashCode("hash")
         .build();
 
 
-    Trace aggregate = aggregator.aggregate(new Trace(), first);
+    final Trace aggregate = this.aggregator.aggregate(new Trace(), first);
 
-    SpanDynamic newFirst = SpanDynamic.newBuilder(first)
-        .setStartTime(toTimestamp(now.minus(1, ChronoUnit.SECONDS)))
+    final SpanDynamic newFirst = SpanDynamic.newBuilder(first)
+        .setStartTime(this.toTimestamp(now.minus(1, ChronoUnit.SECONDS)))
         .build();
-    aggregator.aggregate(aggregate, newFirst);
+    this.aggregator.aggregate(aggregate, newFirst);
     assertEquals(2, aggregate.getSpanList().size(), "Invalid amount of spans in trace");
-    assertEquals(aggregate.getSpanList().get(0), newFirst,"Trace does not contain first span");
+    assertEquals(aggregate.getSpanList().get(0), newFirst, "Trace does not contain first span");
   }
 
   @Test
   void addLaterSpan() {
-    Instant now = Instant.now();
-    SpanDynamic first = SpanDynamic.newBuilder()
+    final Instant now = Instant.now();
+    final SpanDynamic first = SpanDynamic.newBuilder()
         .setLandscapeToken(TEST_TOKEN)
-        .setStartTime(toTimestamp(now.minus(1, ChronoUnit.SECONDS)))
-        .setEndTime(toTimestamp(now))
+        .setStartTime(this.toTimestamp(now.minus(1, ChronoUnit.SECONDS)))
+        .setEndTime(this.toTimestamp(now))
         .setTraceId("tid")
         .setSpanId("sid")
         .setHashCode("hash")
         .build();
 
-    Trace aggregate = aggregator.aggregate(new Trace(), first);
+    final Trace aggregate = this.aggregator.aggregate(new Trace(), first);
 
-    SpanDynamic newLast = SpanDynamic.newBuilder(first)
-        .setStartTime(toTimestamp(now.plus(1, ChronoUnit.SECONDS)))
-        .setEndTime(toTimestamp(now.plus(5, ChronoUnit.SECONDS)))
+    final SpanDynamic newLast = SpanDynamic.newBuilder(first)
+        .setStartTime(this.toTimestamp(now.plus(1, ChronoUnit.SECONDS)))
+        .setEndTime(this.toTimestamp(now.plus(5, ChronoUnit.SECONDS)))
         .build();
-    aggregator.aggregate(aggregate, newLast);
+    this.aggregator.aggregate(aggregate, newLast);
     assertEquals(2, aggregate.getSpanList().size(), "Invalid amount of spans in trace");
-    assertEquals(aggregate.getSpanList().get(1), newLast,"Trace does not contain first span");
+    assertEquals(aggregate.getSpanList().get(1), newLast, "Trace does not contain first span");
   }
 
 
 
-  private Timestamp toTimestamp(Instant instant) {
+  private Timestamp toTimestamp(final Instant instant) {
     return new Timestamp(instant.getEpochSecond(), instant.getNano());
   }
 

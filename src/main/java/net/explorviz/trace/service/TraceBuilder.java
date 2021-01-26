@@ -12,6 +12,7 @@ public interface TraceBuilder {
 
   /**
    * Builds the {@link Trace} that groups the the collection of {@link SpanDynamic}s.
+   *
    * @param spans the
    * @return the trace corresponding to the spans
    */

@@ -1,23 +1,22 @@
 package net.explorviz.trace.service;
 
-import static org.junit.jupiter.api.Assertions.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import jnr.ffi.annotations.In;
 import net.explorviz.avro.Timestamp;
-import org.apache.groovy.json.internal.Chr;
 import org.junit.jupiter.api.Test;
 
 class TimestampHelperTest {
 
   @Test
   void order() {
-    Instant now = Instant.now();
+    final Instant now = Instant.now();
 
-    Timestamp plus5 = TimestampHelper.toTimestamp(now.plus(5, ChronoUnit.SECONDS));
-    Timestamp minus5 = TimestampHelper.toTimestamp(now.minus(5, ChronoUnit.SECONDS));
+    final Timestamp plus5 = TimestampHelper.toTimestamp(now.plus(5, ChronoUnit.SECONDS));
+    final Timestamp minus5 = TimestampHelper.toTimestamp(now.minus(5, ChronoUnit.SECONDS));
 
 
     // Order
@@ -38,13 +37,13 @@ class TimestampHelperTest {
 
   @Test
   void durationMs() {
-    Instant now = Instant.now();
+    final Instant now = Instant.now();
 
-    long durationMs = 123547;
-    Duration d = Duration.of(durationMs, ChronoUnit.MILLIS);
+    final long durationMs = 123547;
+    final Duration d = Duration.of(durationMs, ChronoUnit.MILLIS);
 
-    Timestamp start = TimestampHelper.toTimestamp(now);
-    Timestamp end = TimestampHelper.toTimestamp(now.plus(d));
+    final Timestamp start = TimestampHelper.toTimestamp(now);
+    final Timestamp end = TimestampHelper.toTimestamp(now.plus(d));
 
     assertEquals(durationMs, TimestampHelper.durationMs(start, end));
     assertEquals(-durationMs, TimestampHelper.durationMs(end, start));
@@ -53,9 +52,9 @@ class TimestampHelperTest {
 
   @Test
   void conversion() {
-    Instant now = Instant.now();
-    Timestamp ts = TimestampHelper.toTimestamp(now);
-    Instant i = TimestampHelper.toInstant(ts);
+    final Instant now = Instant.now();
+    final Timestamp ts = TimestampHelper.toTimestamp(now);
+    final Instant i = TimestampHelper.toInstant(ts);
     assertEquals(now, i);
   }
 

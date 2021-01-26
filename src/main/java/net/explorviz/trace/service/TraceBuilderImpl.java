@@ -1,28 +1,29 @@
 package net.explorviz.trace.service;
 
+import static net.explorviz.trace.service.TimestampHelper.isAfter;
+import static net.explorviz.trace.service.TimestampHelper.isBefore;
+import java.util.ArrayList;
+import java.util.Collection;
+import javax.inject.Singleton;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Timestamp;
 import net.explorviz.avro.Trace;
 
-import javax.inject.Singleton;
-import java.util.ArrayList;
-import java.util.Collection;
-
-import static net.explorviz.trace.service.TimestampHelper.isAfter;
-import static net.explorviz.trace.service.TimestampHelper.isBefore;
-
+/**
+ * Builds a trace out of a set spans.
+ */
 @Singleton
 public class TraceBuilderImpl implements TraceBuilder {
 
 
   @Override
   public Trace build(final Collection<SpanDynamic> spans) {
-    if (spans.size() == 0) {
+    if (spans.isEmpty()) {
       throw new IllegalArgumentException("No spans given");
     }
-    SpanDynamic s = spans.stream().findAny().get();
+    final SpanDynamic s = spans.stream().findAny().get();
 
-    Trace.Builder builder = Trace.newBuilder();
+    final Trace.Builder builder = Trace.newBuilder();
 
     builder.setOverallRequestCount(1);
     builder.setTraceCount(1);
@@ -33,7 +34,7 @@ public class TraceBuilderImpl implements TraceBuilder {
 
     // Update timings, check integrity
     spans.forEach(span -> {
-      if (!span.getLandscapeToken().equals(builder.getLandscapeToken())) {
+      if (!span.getLandscapeToken().equals(builder.getLandscapeToken())) { // NOPMD
         throw new IllegalArgumentException("Ambiguous landscape tokens");
       } else if (!span.getTraceId().equals(builder.getTraceId())) {
         throw new IllegalArgumentException("Ambiguous trace ids");
@@ -49,8 +50,8 @@ public class TraceBuilderImpl implements TraceBuilder {
     });
 
     builder.setSpanList(new ArrayList<>(spans));
-    Timestamp start = builder.getStartTime();
-    Timestamp end = builder.getEndTime();
+    final Timestamp start = builder.getStartTime();
+    final Timestamp end = builder.getEndTime();
     builder.setDuration(TimestampHelper.durationMs(start, end));
 
     return builder.build();

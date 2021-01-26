@@ -5,6 +5,8 @@ plugins {
   id "com.commercehub.gradle.plugin.avro" version "0.21.0"
 }
 
+apply from: 'buildscripts/code-analysis.gradle'
+
 repositories {
   mavenLocal()
   mavenCentral()

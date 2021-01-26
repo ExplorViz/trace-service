@@ -4,7 +4,12 @@ package net.explorviz.trace.persistence;
  * Thrown if a record could not be persisted.
  */
 public class PersistingException extends RuntimeException {
-  public PersistingException() {}
+
+  private static final long serialVersionUID = 5379259515382372634L; // NOPMD
+
+  public PersistingException() {
+    super();
+  }
 
   public PersistingException(final String message) {
     super(message);

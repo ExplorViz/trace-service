@@ -7,15 +7,22 @@ import javax.enterprise.context.Dependent;
 import javax.enterprise.inject.Produces;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+
+/**
+ * Factory for the client of the schema registry.
+ */
 @Dependent
 public class SchemaRegistryClientProducer {
 
-  @ConfigProperty(name = "explorviz.schema-registry.url")
-  String schemaRegistryUrl;
+  private static final int IDENTITY_MAP_CAPACITY = 10;
+
+  @ConfigProperty(name = "explorviz.schema-registry.url") // NOPMD
+  /* default */ String schemaRegistryUrl; // NOCS
 
   @Produces
   @DefaultBean
   public SchemaRegistryClient schemaRegistryClient() {
-    return new CachedSchemaRegistryClient("http://" + this.schemaRegistryUrl, 10);
+    return new CachedSchemaRegistryClient("http://" + this.schemaRegistryUrl,
+        IDENTITY_MAP_CAPACITY);
   }
 }

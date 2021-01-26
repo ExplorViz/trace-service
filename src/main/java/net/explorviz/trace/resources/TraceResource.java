@@ -13,15 +13,18 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import net.explorviz.avro.Trace;
 import net.explorviz.trace.service.TraceService;
-import org.apache.avro.io.DecoderFactory;
-import org.apache.avro.io.EncoderFactory;
 
+/**
+ * HTTP resource for accessing traces.
+ */
 @Path("/v2/landscapes")
 public class TraceResource {
 
 
+
+  private static final long MIN_SECONDS = 1_577_836_800; // 01.01.2020 00:00
+
   private final TraceService traceService;
-  private final static long MIN_SECONDS = 1577836800; // 01.01.2020 00:00
 
   @Inject
   public TraceResource(final TraceService traceService) {
@@ -31,10 +34,10 @@ public class TraceResource {
   @GET
   @Path("/{token}/dynamic/{traceid}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Trace getTrace(@PathParam("token") String landscapeToken,
-                        @PathParam("traceid") String traceId) {
+  public Trace getTrace(@PathParam("token") final String landscapeToken,
+      @PathParam("traceid") final String traceId) {
 
-    Optional<Trace> trace = traceService.getById(landscapeToken, traceId);
+    final Optional<Trace> trace = this.traceService.getById(landscapeToken, traceId);
     if (trace.isPresent()) {
       return trace.get();
     } else {
@@ -45,13 +48,13 @@ public class TraceResource {
   @GET
   @Path("/{token}/dynamic")
   @Produces(MediaType.APPLICATION_JSON)
-  public Collection<Trace> getTraces(@PathParam("token") String landscapeToken,
-                                     @QueryParam("from") Long fromMs,
-                                     @QueryParam("to") Long toMs) {
+  public Collection<Trace> getTraces(@PathParam("token") final String landscapeToken,
+      @QueryParam("from") final Long fromMs,
+      @QueryParam("to") final Long toMs) {
 
     Instant from = Instant.ofEpochSecond(MIN_SECONDS, 0);
     Instant to = Instant.now();
-    int c = (fromMs == null ? 0 : 1) + (toMs == null ? 0 : 2);
+    final int c = (fromMs == null ? 0 : 1) + (toMs == null ? 0 : 2);
     switch (c) {
       case 1: // from is given
         from = Instant.ofEpochMilli(fromMs);
@@ -59,14 +62,15 @@ public class TraceResource {
       case 2: // to is given
         to = Instant.ofEpochMilli(toMs);
         break;
-      case 3: // both given
+      case 3: // both given // NOCS
         from = Instant.ofEpochMilli(fromMs);
         to = Instant.ofEpochMilli(toMs);
         break;
+      default:
+        break;
     }
 
-    Collection<Trace> traces = traceService.getBetween(landscapeToken, from, to);
-    return traces;
+    return this.traceService.getBetween(landscapeToken, from, to);
   }
 
 }

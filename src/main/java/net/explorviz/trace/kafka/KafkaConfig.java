@@ -3,44 +3,44 @@ package net.explorviz.trace.kafka;
 import javax.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+/**
+ * Configuration options for Kafka.
+ */
 @ApplicationScoped
-// https://quarkus.io/guides/config#using-configproperties
+@SuppressWarnings("PMD.DefaultPackage")
 public class KafkaConfig {
 
-  public static final String TRACES_STORE = "traces";
+  private static final Class<SpanTimestampKafkaExtractor> TIMESTAMP_EXTRACTOR =
+      SpanTimestampKafkaExtractor.class;
 
-  private final Class<EVSpanTimestampKafkaExtractor> TIMESTAMP_EXTRACTOR =
-      EVSpanTimestampKafkaExtractor.class;
+  // CHECKSTYLE:OFF
 
   @ConfigProperty(name = "quarkus.kafka-streams.application-id")
-  String applicationId;
-
+  /* default */ String applicationId;
 
   @ConfigProperty(name = "quarkus.kafka-streams.bootstrap-servers")
-  String bootstrapServers;
+  /* default */ String bootstrapServers;
 
   @ConfigProperty(name = "explorviz.kafka-streams.topics.in")
-  String inTopic;
+  /* default */ String inTopic;
 
   @ConfigProperty(name = "explorviz.kafka-streams.topics.out")
-  String outTopic;
+  /* default */ String outTopic;
 
   @ConfigProperty(name = "explorviz.schema-registry.url")
-  String schemaRegistryUrl;
+  /* default */ String schemaRegistryUrl;
 
   @ConfigProperty(name = "explorviz.commit-interval-ms")
-  int commitIntervalMs;
+  /* default */ int commitIntervalMs;
+
+  // CHECKSTYLE:ON
 
   public int getCommitIntervalMs() {
     return this.commitIntervalMs;
   }
 
-  public void setCommitIntervalMs(final int commitIntervalMs) {
-    this.commitIntervalMs = commitIntervalMs;
-  }
-
-  public Class<EVSpanTimestampKafkaExtractor> getTimestampExtractor() {
-    return this.TIMESTAMP_EXTRACTOR;
+  public Class<SpanTimestampKafkaExtractor> getTimestampExtractor() {
+    return KafkaConfig.TIMESTAMP_EXTRACTOR;
   }
 
   public String getApplicationId() {
@@ -53,10 +53,6 @@ public class KafkaConfig {
 
   public String getInTopic() {
     return this.inTopic;
-  }
-
-  public String getOutTopic() {
-    return this.outTopic;
   }
 
   public String getSchemaRegistryUrl() {

@@ -33,7 +33,7 @@ public class CassandraFactory {
   }
 
   /**
-   * Return a ready for use {@link CqlSession}
+   * Return a ready for use {@link CqlSession}.
    */
   @Produces
   public CqlSession produceCqlSession() {
