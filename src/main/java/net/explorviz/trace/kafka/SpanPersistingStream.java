@@ -120,6 +120,9 @@ public class SpanPersistingStream {
 
     traceStream.foreach((k, t) -> {
       try {
+        if (LOGGER.isDebugEnabled()) {
+          LOGGER.debug("Received trace record: {}", t.toString());
+        }
         this.repository.saveTraceAsync(t);
       } catch (final PersistingException e) {
         // TODO: How to handle these spans? Enqueue somewhere for retries?
