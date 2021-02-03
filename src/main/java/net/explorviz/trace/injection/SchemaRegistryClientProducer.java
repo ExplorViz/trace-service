@@ -22,7 +22,7 @@ public class SchemaRegistryClientProducer {
   @Produces
   @DefaultBean
   public SchemaRegistryClient schemaRegistryClient() {
-    return new CachedSchemaRegistryClient("http://" + this.schemaRegistryUrl,
+    return new CachedSchemaRegistryClient(this.schemaRegistryUrl,
         IDENTITY_MAP_CAPACITY);
   }
 }
