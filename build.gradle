@@ -24,6 +24,7 @@ repositories {
  */
 
 dependencies {
+  implementation 'com.datastax.oss.quarkus:cassandra-quarkus-client'
   implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
 
   implementation 'io.quarkus:quarkus-kafka-streams'
