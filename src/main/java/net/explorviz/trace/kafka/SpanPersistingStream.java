@@ -6,6 +6,7 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import javax.enterprise.context.ApplicationScoped;
@@ -13,6 +14,7 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
+import net.explorviz.trace.persistence.SpanDynamicReactiveService;
 import net.explorviz.trace.service.TraceAggregator;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
@@ -54,15 +56,19 @@ public class SpanPersistingStream {
 
   private KafkaStreams streams;
 
+  private final SpanDynamicReactiveService spanDynamicReactiveService;
+
   @Inject
   public SpanPersistingStream(final SchemaRegistryClient schemaRegistryClient,
-      final KafkaConfig config) {
+      final KafkaConfig config, SpanDynamicReactiveService spanDynamicReactiveService) {
 
     this.registryClient = schemaRegistryClient;
     this.config = config;
 
     this.topology = this.buildTopology();
     this.setupStreamsConfig();
+
+    this.spanDynamicReactiveService = spanDynamicReactiveService;
 
   }
 
@@ -116,7 +122,26 @@ public class SpanPersistingStream {
       if (LOGGER.isDebugEnabled()) {
         LOGGER.debug("Received trace record: {}", t.toString());
       }
-      // this.repository.saveTraceAsync(t);
+
+      List<SpanDynamic> spanList = t.getSpanList();
+
+      for (SpanDynamic span : spanList) {
+
+        net.explorviz.trace.persistence.dao.Timestamp startTimestampDao =
+            new net.explorviz.trace.persistence.dao.Timestamp(1, span.getStartTime().getSeconds(),
+                span.getStartTime().getNanoAdjust());
+
+        net.explorviz.trace.persistence.dao.Timestamp endTimestampDao =
+            new net.explorviz.trace.persistence.dao.Timestamp(1, span.getEndTime().getSeconds(),
+                span.getEndTime().getNanoAdjust());
+
+        net.explorviz.trace.persistence.dao.SpanDynamic spanDynamicEntity =
+            new net.explorviz.trace.persistence.dao.SpanDynamic(span.getLandscapeToken(),
+                span.getSpanId(), span.getParentSpanId(), span.getTraceId(), startTimestampDao,
+                endTimestampDao, span.getHashCode());
+
+        this.spanDynamicReactiveService.add(spanDynamicEntity);
+      }
 
     });
 

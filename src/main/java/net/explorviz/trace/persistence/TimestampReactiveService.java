@@ -7,21 +7,24 @@ import javax.inject.Inject;
 import net.explorviz.trace.persistence.dao.Timestamp;
 import net.explorviz.trace.persistence.dao.TimestampDaoReactive;
 
+/**
+ * Business layer service to store/load {@link Timestamp} from the Cassandra database.
+ */
 @ApplicationScoped
 public class TimestampReactiveService {
 
   private final TimestampDaoReactive timestampDaoReactive;
 
   @Inject
-  public TimestampReactiveService(TimestampDaoReactive timestampDaoReactive) {
+  public TimestampReactiveService(final TimestampDaoReactive timestampDaoReactive) {
     this.timestampDaoReactive = timestampDaoReactive;
   }
 
-  public Uni<Void> add(Timestamp timestamp) {
+  public Uni<Void> add(final Timestamp timestamp) {
     return timestampDaoReactive.updateAsync(timestamp);
   }
 
-  public Multi<Timestamp> get(int id) {
+  public Multi<Timestamp> get(final int id) {
     return timestampDaoReactive.findByIdAsync(id);
   }
 

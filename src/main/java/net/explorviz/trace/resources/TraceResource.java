@@ -10,6 +10,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import net.explorviz.avro.Trace;
+import net.explorviz.trace.persistence.SpanDynamicReactiveService;
 
 /**
  * HTTP resource for accessing traces.
@@ -17,12 +18,14 @@ import net.explorviz.avro.Trace;
 @Path("/v2/landscapes")
 public class TraceResource {
 
-
-
   private static final long MIN_SECONDS = 1_577_836_800; // 01.01.2020 00:00
 
+  private final SpanDynamicReactiveService spanService;
+
   @Inject
-  public TraceResource() {}
+  public TraceResource(final SpanDynamicReactiveService service) {
+    this.spanService = service;
+  }
 
   @GET
   @Path("/{token}/dynamic/{traceid}")
