@@ -13,11 +13,14 @@ public class SpanDynamic {
   @PartitionKey
   private String landscapeToken;
 
-  private String spanId;
-  private String parentSpanId;
+  @ClusteringColumn(1)
   private String traceId;
 
-  @ClusteringColumn
+  @ClusteringColumn(2)
+  private String spanId;
+  private String parentSpanId;
+
+  @ClusteringColumn(3) // NOCS
   private Timestamp startTime;
 
   private Timestamp endTime;

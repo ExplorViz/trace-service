@@ -1,7 +1,10 @@
 package net.explorviz.trace.resources;
 
+import io.smallrye.mutiny.Multi;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
+import java.util.function.Predicate;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -11,6 +14,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import net.explorviz.avro.Trace;
 import net.explorviz.trace.persistence.SpanDynamicReactiveService;
+import net.explorviz.trace.persistence.dao.SpanDynamic;
 
 /**
  * HTTP resource for accessing traces.
@@ -30,10 +34,25 @@ public class TraceResource {
   @GET
   @Path("/{token}/dynamic/{traceid}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Trace getTrace(@PathParam("token") final String landscapeToken,
+  public Multi<Trace> getTrace(@PathParam("token") final String landscapeToken,
       @PathParam("traceid") final String traceId) {
 
-    return null;
+    Predicate<SpanDynamic> lambdaPredicate = (SpanDynamic x) -> (x.getTraceId().equals(traceId));
+
+    List<SpanDynamic> spanList =
+        this.spanService.get(landscapeToken).transform().byFilteringItemsWith(lambdaPredicate)
+            .collectItems().asList().await().indefinitely();
+
+    if (spanList.isEmpty()) {
+      return Multi.createFrom().empty();
+    }
+
+    return Multi.createFrom().empty();
+
+    // return Multi.createFrom()
+    // .item(new Trace(landscapeToken, traceId, spanList.get(0).getStartTime(),
+    // spanList.get(spanList.size() - 1).getEndTime(), 5, 5,
+    // 5, spanList));
   }
 
   @GET
