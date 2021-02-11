@@ -13,8 +13,6 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
-import net.explorviz.trace.persistence.PersistingException;
-import net.explorviz.trace.persistence.SpanRepository;
 import net.explorviz.trace.service.TraceAggregator;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
@@ -56,20 +54,15 @@ public class SpanPersistingStream {
 
   private KafkaStreams streams;
 
-  private final SpanRepository repository;
-
   @Inject
   public SpanPersistingStream(final SchemaRegistryClient schemaRegistryClient,
-      final KafkaConfig config,
-      final SpanRepository repository) {
+      final KafkaConfig config) {
 
     this.registryClient = schemaRegistryClient;
     this.config = config;
 
     this.topology = this.buildTopology();
     this.setupStreamsConfig();
-
-    this.repository = repository;
 
   }
 
@@ -119,17 +112,12 @@ public class SpanPersistingStream {
         traceTable.toStream().selectKey((k, v) -> v.getLandscapeToken() + "::" + k);
 
     traceStream.foreach((k, t) -> {
-      try {
-        if (LOGGER.isDebugEnabled()) {
-          LOGGER.debug("Received trace record: {}", t.toString());
-        }
-        this.repository.saveTraceAsync(t);
-      } catch (final PersistingException e) {
-        // TODO: How to handle these spans? Enqueue somewhere for retries?
-        if (LOGGER.isErrorEnabled()) {
-          LOGGER.error("A span was not persisted: {0}", e);
-        }
+
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("Received trace record: {}", t.toString());
       }
+      // this.repository.saveTraceAsync(t);
+
     });
 
     return builder.build();

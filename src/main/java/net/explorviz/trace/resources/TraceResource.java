@@ -2,17 +2,14 @@ package net.explorviz.trace.resources;
 
 import java.time.Instant;
 import java.util.Collection;
-import java.util.Optional;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
-import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import net.explorviz.avro.Trace;
-import net.explorviz.trace.service.TraceService;
 
 /**
  * HTTP resource for accessing traces.
@@ -24,12 +21,8 @@ public class TraceResource {
 
   private static final long MIN_SECONDS = 1_577_836_800; // 01.01.2020 00:00
 
-  private final TraceService traceService;
-
   @Inject
-  public TraceResource(final TraceService traceService) {
-    this.traceService = traceService;
-  }
+  public TraceResource() {}
 
   @GET
   @Path("/{token}/dynamic/{traceid}")
@@ -37,12 +30,7 @@ public class TraceResource {
   public Trace getTrace(@PathParam("token") final String landscapeToken,
       @PathParam("traceid") final String traceId) {
 
-    final Optional<Trace> trace = this.traceService.getById(landscapeToken, traceId);
-    if (trace.isPresent()) {
-      return trace.get();
-    } else {
-      throw new NotFoundException();
-    }
+    return null;
   }
 
   @GET
@@ -70,7 +58,7 @@ public class TraceResource {
         break;
     }
 
-    return this.traceService.getBetween(landscapeToken, from, to);
+    return null;
   }
 
 }
