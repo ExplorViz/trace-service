@@ -1,8 +1,6 @@
 package net.explorviz.trace.persistence.dao;
 
-import com.datastax.oss.driver.api.mapper.annotations.ClusteringColumn;
 import com.datastax.oss.driver.api.mapper.annotations.Entity;
-import com.datastax.oss.driver.api.mapper.annotations.PartitionKey;
 
 /**
  * Bean for dynamic Span data.
@@ -10,17 +8,13 @@ import com.datastax.oss.driver.api.mapper.annotations.PartitionKey;
 @Entity
 public class SpanDynamic {
 
-  @PartitionKey
   private String landscapeToken;
 
-  @ClusteringColumn(1)
   private String traceId;
 
-  @ClusteringColumn(2)
   private String spanId;
   private String parentSpanId;
 
-  @ClusteringColumn(3) // NOCS
   private Timestamp startTime;
 
   private Timestamp endTime;

@@ -34,6 +34,9 @@ dependencies {
   implementation 'io.quarkus:quarkus-kafka-streams'
   implementation 'io.quarkus:quarkus-resteasy'
   implementation 'io.quarkus:quarkus-resteasy-jackson'
+  
+  //implementation 'io.quarkus:quarkus-mutiny'
+  //implementation 'io.quarkus:quarkus-resteasy-mutiny'
 
   implementation 'io.opencensus:opencensus-proto:0.2.0'
 
