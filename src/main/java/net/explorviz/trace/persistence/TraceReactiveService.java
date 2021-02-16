@@ -20,12 +20,16 @@ public class TraceReactiveService {
     this.traceDaoReactive = traceDaoReactive;
   }
 
+  public Uni<Void> insert(final Trace trace) {
+    return this.traceDaoReactive.insertAsync(trace);
+  }
+
   public Uni<Void> add(final Trace trace) {
-    return traceDaoReactive.updateAsync(trace);
-  } 
+    return this.traceDaoReactive.updateAsync(trace);
+  }
 
   public Multi<Trace> get(final String id) {
-    return traceDaoReactive.findByIdAsync(id);
+    return this.traceDaoReactive.findByIdAsync(id);
   }
 
 }

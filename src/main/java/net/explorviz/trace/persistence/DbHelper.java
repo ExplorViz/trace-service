@@ -33,6 +33,7 @@ public class DbHelper {
 
   private static final String COL_TOKEN = "landscape_token";
   private static final String COL_TRACE_ID = "trace_id";
+
   private static final String COL_TIMESTAMP_SECONDS = "seconds";
   private static final String COL_TIMESTAMP_NANO = "nano_adjust";
 
@@ -40,16 +41,15 @@ public class DbHelper {
   private static final String COL_TRACE_REQUESTS = "overall_request_count";
   private static final String COL_TRACE_COUNT = "trace_count";
 
-  private static final String COL_START_TIMESTAMP = "start_time";
-
-  private static final String COL_END_TIMESTAMP = "end_time";
+  private static final String COL_TRACE_START_TIMESTAMP = "start_time";
+  private static final String COL_TRACE_END_TIMESTAMP = "end_time";
 
   private static final String COL_SPAN_ID = "span_id";
-  private static final String COL_SPAN_TRACE_ID = "span_trace_id";
-  private static final String COL_SPAN_PARENT_ID = "span_parent_id";
-  private static final String COL_SPAN_START_TIME = "span_start_time";
-  private static final String COL_SPAN_END_TIME = "span_end_time";
-  private static final String COL_SPAN_HASH = "span_hash";
+  private static final String COL_SPAN_TRACE_ID = "trace_id";
+  private static final String COL_SPAN_PARENT_ID = "parent_span_id";
+  private static final String COL_SPAN_START_TIME = "start_time";
+  private static final String COL_SPAN_END_TIME = "end_time";
+  private static final String COL_SPAN_HASH = "hash_code";
 
 
   public static final String COL_TRACE_SPANS = "span_list"; // NOCS
@@ -81,12 +81,14 @@ public class DbHelper {
    * Creates a keyspace name "explorviz". No-op if this keyspace already exists.
    */
   private void createKeySpace() {
+    LOGGER.info("Trying to create Keyspace");
     final CreateKeyspace createKs = SchemaBuilder
         .createKeyspace(KEYSPACE_NAME)
         .ifNotExists()
         .withSimpleStrategy(1)
         .withDurableWrites(true);
     this.dbSession.execute(createKs.build());
+    LOGGER.info("Created Keyspace");
   }
 
   /**
@@ -105,6 +107,7 @@ public class DbHelper {
     final CreateType createSpanUdt = SchemaBuilder
         .createType(KEYSPACE_NAME, TYPE_SPAN)
         .ifNotExists()
+        .withField(COL_TOKEN, DataTypes.TEXT)
         .withField(COL_SPAN_TRACE_ID, DataTypes.TEXT)
         .withField(COL_SPAN_ID, DataTypes.TEXT)
         .withField(COL_SPAN_PARENT_ID, DataTypes.TEXT)
@@ -117,19 +120,19 @@ public class DbHelper {
         .createTable(KEYSPACE_NAME, TABLE_TRACES)
         .ifNotExists()
         .withPartitionKey(COL_TOKEN, DataTypes.TEXT)
-        .withClusteringColumn(COL_START_TIMESTAMP, SchemaBuilder.udt(TYPE_TIMESTAMP, true))
+        .withClusteringColumn(COL_TRACE_START_TIMESTAMP, SchemaBuilder.udt(TYPE_TIMESTAMP, true))
         .withClusteringColumn(COL_TRACE_ID, DataTypes.TEXT)
-        .withColumn(COL_END_TIMESTAMP, SchemaBuilder.udt(TYPE_TIMESTAMP, true))
+        .withColumn(COL_TRACE_END_TIMESTAMP, SchemaBuilder.udt(TYPE_TIMESTAMP, true))
         .withColumn(COL_TRACE_DURATION, DataTypes.BIGINT)
         .withColumn(COL_TRACE_REQUESTS, DataTypes.INT)
         .withColumn(COL_TRACE_COUNT, DataTypes.INT)
-        .withColumn(COL_TRACE_SPANS, DataTypes.setOf(SchemaBuilder.udt(TYPE_SPAN, true), false));
+        .withColumn(COL_TRACE_SPANS, DataTypes.listOf(SchemaBuilder.udt(TYPE_SPAN, true), true));
 
     // Create index on start time for efficient range queries
     final CreateIndex createTimestampIndex = SchemaBuilder.createIndex("timestamp_index")
         .ifNotExists()
         .onTable(KEYSPACE_NAME, TABLE_TRACES)
-        .andColumn(COL_START_TIMESTAMP);
+        .andColumn(COL_TRACE_START_TIMESTAMP);
 
     this.dbSession.execute(createTimestampUdt.asCql());
     this.dbSession.execute(createSpanUdt.asCql());

@@ -1,11 +1,13 @@
 package net.explorviz.trace.persistence.dao;
 
+import com.datastax.oss.driver.api.mapper.annotations.CqlName;
 import com.datastax.oss.driver.api.mapper.annotations.Entity;
 
 /**
  * Bean for dynamic Span data.
  */
 @Entity
+@CqlName("explorviz_timestamp")
 public class Timestamp {
 
   private long seconds;

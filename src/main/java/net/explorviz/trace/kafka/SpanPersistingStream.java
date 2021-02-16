@@ -173,7 +173,7 @@ public class SpanPersistingStream {
 
       LOGGER.info("Saved " + daoTrace.getLandscapeToken());
 
-      this.traceReactiveService.add(daoTrace);
+      this.traceReactiveService.insert(daoTrace).await().indefinitely();
 
     });
 

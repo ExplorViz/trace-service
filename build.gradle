@@ -47,7 +47,8 @@ dependencies {
 
   implementation group: 'com.datastax.oss', name: 'java-driver-core', version: '4.8.0'
   implementation group: 'com.datastax.oss', name: 'java-driver-query-builder', version: '4.8.0'
-
+  
+  implementation 'io.quarkus:quarkus-resteasy-mutiny'
 
   testImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'
   testImplementation 'io.quarkus:quarkus-junit5'
