@@ -28,14 +28,10 @@ public class DbHelper {
   private static final String KEYSPACE_NAME = "explorviz";
   private static final String TABLE_TRACES = "trace"; // NOCS
 
-  private static final String TYPE_TIMESTAMP = "explorviz_timestamp";
   private static final String TYPE_SPAN = "span";
 
   private static final String COL_TOKEN = "landscape_token";
   private static final String COL_TRACE_ID = "trace_id";
-
-  private static final String COL_TIMESTAMP_SECONDS = "seconds";
-  private static final String COL_TIMESTAMP_NANO = "nano_adjust";
 
   private static final String COL_TRACE_DURATION = "duration";
   private static final String COL_TRACE_REQUESTS = "overall_request_count";
@@ -97,13 +93,6 @@ public class DbHelper {
    */
   private void createTables() {
 
-    final CreateType createTimestampUdt = SchemaBuilder
-        .createType(KEYSPACE_NAME, TYPE_TIMESTAMP)
-        .ifNotExists()
-        .withField(COL_TIMESTAMP_SECONDS, DataTypes.BIGINT)
-        .withField(COL_TIMESTAMP_NANO, DataTypes.INT);
-
-
     final CreateType createSpanUdt = SchemaBuilder
         .createType(KEYSPACE_NAME, TYPE_SPAN)
         .ifNotExists()
@@ -111,8 +100,8 @@ public class DbHelper {
         .withField(COL_SPAN_TRACE_ID, DataTypes.TEXT)
         .withField(COL_SPAN_ID, DataTypes.TEXT)
         .withField(COL_SPAN_PARENT_ID, DataTypes.TEXT)
-        .withField(COL_SPAN_START_TIME, SchemaBuilder.udt(TYPE_TIMESTAMP, true))
-        .withField(COL_SPAN_END_TIME, SchemaBuilder.udt(TYPE_TIMESTAMP, true))
+        .withField(COL_SPAN_START_TIME, DataTypes.BIGINT)
+        .withField(COL_SPAN_END_TIME, DataTypes.BIGINT)
         .withField(COL_SPAN_HASH, DataTypes.TEXT);
 
 
@@ -120,24 +109,22 @@ public class DbHelper {
         .createTable(KEYSPACE_NAME, TABLE_TRACES)
         .ifNotExists()
         .withPartitionKey(COL_TOKEN, DataTypes.TEXT)
-        .withClusteringColumn(COL_TRACE_START_TIMESTAMP, SchemaBuilder.udt(TYPE_TIMESTAMP, true))
+        .withClusteringColumn(COL_TRACE_START_TIMESTAMP, DataTypes.BIGINT)
         .withClusteringColumn(COL_TRACE_ID, DataTypes.TEXT)
-        .withColumn(COL_TRACE_END_TIMESTAMP, SchemaBuilder.udt(TYPE_TIMESTAMP, true))
+        .withColumn(COL_TRACE_END_TIMESTAMP, DataTypes.BIGINT)
         .withColumn(COL_TRACE_DURATION, DataTypes.BIGINT)
         .withColumn(COL_TRACE_REQUESTS, DataTypes.INT)
         .withColumn(COL_TRACE_COUNT, DataTypes.INT)
         .withColumn(COL_TRACE_SPANS, DataTypes.listOf(SchemaBuilder.udt(TYPE_SPAN, true), true));
 
-    // Create index on start time for efficient range queries
-    final CreateIndex createTimestampIndex = SchemaBuilder.createIndex("timestamp_index")
+    final CreateIndex createTraceIdIndex = SchemaBuilder.createIndex("trace_id_index")
         .ifNotExists()
         .onTable(KEYSPACE_NAME, TABLE_TRACES)
-        .andColumn(COL_TRACE_START_TIMESTAMP);
+        .andColumn(COL_TRACE_ID);
 
-    this.dbSession.execute(createTimestampUdt.asCql());
     this.dbSession.execute(createSpanUdt.asCql());
     this.dbSession.execute(createTraceTable.asCql());
-    this.dbSession.execute(createTimestampIndex.asCql());
+    this.dbSession.execute(createTraceIdIndex.asCql());
 
     if (LOGGER.isDebugEnabled()) {
       LOGGER.debug("Created trace table and associated types");

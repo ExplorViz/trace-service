@@ -15,12 +15,12 @@ public class Trace {
   private String landscapeToken;
 
   @ClusteringColumn(1)
-  private Timestamp startTime;
+  private long startTime;
 
   @ClusteringColumn(2)
   private String traceId;
 
-  private Timestamp endTime;
+  private long endTime;
   private long duration;
   private int overallRequestCount;
   private int traceCount;
@@ -32,8 +32,8 @@ public class Trace {
     // for serialization
   }
 
-  public Trace(final String landscapeToken, final String traceId, final Timestamp startTime,
-      final Timestamp endTime,
+  public Trace(final String landscapeToken, final String traceId, final long startTime,
+      final long endTime,
       final long duration, final int overallRequestCount, final int traceCount,
       final List<SpanDynamic> spanList) {
     super();
@@ -63,19 +63,19 @@ public class Trace {
     this.traceId = traceId;
   }
 
-  public Timestamp getStartTime() {
+  public long getStartTime() {
     return this.startTime;
   }
 
-  public void setStartTime(final Timestamp startTime) {
+  public void setStartTime(final long startTime) {
     this.startTime = startTime;
   }
 
-  public Timestamp getEndTime() {
+  public long getEndTime() {
     return this.endTime;
   }
 
-  public void setEndTime(final Timestamp endTime) {
+  public void setEndTime(final long endTime) {
     this.endTime = endTime;
   }
 

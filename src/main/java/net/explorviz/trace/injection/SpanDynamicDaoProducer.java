@@ -7,10 +7,9 @@ import javax.inject.Inject;
 import net.explorviz.trace.persistence.dao.SpanDynamicDaoReactive;
 import net.explorviz.trace.persistence.dao.SpanDynamicMapper;
 import net.explorviz.trace.persistence.dao.SpanDynamicMapperBuilder;
-import net.explorviz.trace.persistence.dao.TimestampDaoReactive;
 
 /**
- * Factory / Producer for the {@link TimestampDaoReactive}.
+ * Factory / Producer for the {@link SpanDynamicDaoProducer}.
  */
 public class SpanDynamicDaoProducer {
 
@@ -23,13 +22,13 @@ public class SpanDynamicDaoProducer {
     final SpanDynamicMapper mapper = new SpanDynamicMapperBuilder(session).build();
 
     // instantiate our Daos
-    spanDynamicDaoReactive = mapper.spanDynamicDaoReactive();
+    this.spanDynamicDaoReactive = mapper.spanDynamicDaoReactive();
   }
 
   @Produces // NOPMD
   @ApplicationScoped
   /* default */ SpanDynamicDaoReactive produceSpanDynamicDaoReactive() {
-    return spanDynamicDaoReactive;
+    return this.spanDynamicDaoReactive;
   }
 
 }

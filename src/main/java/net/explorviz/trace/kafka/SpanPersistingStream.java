@@ -17,6 +17,7 @@ import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
 import net.explorviz.trace.persistence.DbHelper;
 import net.explorviz.trace.persistence.TraceReactiveService;
+import net.explorviz.trace.service.TimestampHelper;
 import net.explorviz.trace.service.TraceAggregator;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
@@ -140,35 +141,25 @@ public class SpanPersistingStream {
 
       for (final SpanDynamic span : t.getSpanList()) {
 
-        final net.explorviz.trace.persistence.dao.Timestamp startTimestampDao =
-            new net.explorviz.trace.persistence.dao.Timestamp(span.getStartTime().getSeconds(),
-                span.getStartTime().getNanoAdjust());
-
-        final net.explorviz.trace.persistence.dao.Timestamp endTimestampDao =
-            new net.explorviz.trace.persistence.dao.Timestamp(span.getEndTime().getSeconds(),
-                span.getEndTime().getNanoAdjust());
+        final long startTime = TimestampHelper.toInstant(span.getStartTime()).toEpochMilli();
+        final long endTime = TimestampHelper.toInstant(span.getEndTime()).toEpochMilli();
 
         final net.explorviz.trace.persistence.dao.SpanDynamic spanDynamicEntity =
             new net.explorviz.trace.persistence.dao.SpanDynamic(span.getLandscapeToken(),
-                span.getSpanId(), span.getParentSpanId(), span.getTraceId(), startTimestampDao,
-                endTimestampDao, span.getHashCode());
+                span.getSpanId(), span.getParentSpanId(), span.getTraceId(), startTime,
+                endTime, span.getHashCode());
 
         daoSpanList.add(spanDynamicEntity);
       }
 
       // Build Dao Trace
 
-      final net.explorviz.trace.persistence.dao.Timestamp startTimestampDao =
-          new net.explorviz.trace.persistence.dao.Timestamp(t.getStartTime().getSeconds(),
-              t.getStartTime().getNanoAdjust());
-
-      final net.explorviz.trace.persistence.dao.Timestamp endTimestampDao =
-          new net.explorviz.trace.persistence.dao.Timestamp(t.getEndTime().getSeconds(),
-              t.getEndTime().getNanoAdjust());
+      final long startTime = TimestampHelper.toInstant(t.getStartTime()).toEpochMilli();
+      final long endTime = TimestampHelper.toInstant(t.getEndTime()).toEpochMilli();
 
       final net.explorviz.trace.persistence.dao.Trace daoTrace =
           new net.explorviz.trace.persistence.dao.Trace(t.getLandscapeToken(), t.getTraceId(),
-              startTimestampDao, endTimestampDao, t.getDuration(), t.getOverallRequestCount(),
+              startTime, endTime, t.getDuration(), t.getOverallRequestCount(),
               t.getTraceCount(), daoSpanList);
 
       LOGGER.info("Saved " + daoTrace.getLandscapeToken());

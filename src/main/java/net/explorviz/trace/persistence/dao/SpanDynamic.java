@@ -15,9 +15,9 @@ public class SpanDynamic {
   private String spanId;
   private String parentSpanId;
 
-  private Timestamp startTime;
+  private long startTime;
 
-  private Timestamp endTime;
+  private long endTime;
   private String hashCode;
 
   public SpanDynamic() {
@@ -26,7 +26,7 @@ public class SpanDynamic {
 
   public SpanDynamic(final String landscapeToken, final String spanId, final String parentSpanId,
       final String traceId,
-      final Timestamp startTime, final Timestamp endTime, final String hashCode) {
+      final long startTime, final long endTime, final String hashCode) {
     super();
     this.landscapeToken = landscapeToken;
     this.spanId = spanId;
@@ -71,19 +71,19 @@ public class SpanDynamic {
     this.traceId = traceId;
   }
 
-  public Timestamp getStartTime() {
+  public long getStartTime() {
     return this.startTime;
   }
 
-  public void setStartTime(final Timestamp startTime) {
+  public void setStartTime(final long startTime) {
     this.startTime = startTime;
   }
 
-  public Timestamp getEndTime() {
+  public long getEndTime() {
     return this.endTime;
   }
 
-  public void setEndTime(final Timestamp endTime) {
+  public void setEndTime(final long endTime) {
     this.endTime = endTime;
   }
 

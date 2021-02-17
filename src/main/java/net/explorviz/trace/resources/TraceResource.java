@@ -32,15 +32,7 @@ public class TraceResource {
   @Produces(MediaType.APPLICATION_JSON)
   public Multi<Trace> getTrace(@PathParam("token") final String landscapeToken,
       @PathParam("traceid") final String traceId) {
-
-    return this.service.get(landscapeToken).filter(t -> t.getTraceId().equals(traceId));
-
-    // return Multi.createFrom().empty();
-
-    // return Multi.createFrom()
-    // .item(new Trace(landscapeToken, traceId, spanList.get(0).getStartTime(),
-    // spanList.get(spanList.size() - 1).getEndTime(), 5, 5,
-    // 5, spanList));
+    return this.service.getByTraceId(landscapeToken, traceId);
   }
 
   @GET
@@ -50,28 +42,26 @@ public class TraceResource {
       @QueryParam("from") final Long fromMs,
       @QueryParam("to") final Long toMs) {
 
-    Instant from = Instant.ofEpochSecond(MIN_SECONDS, 0);
-    Instant to = Instant.now();
+    long from = MIN_SECONDS;
+    long to = Instant.now().toEpochMilli();
+
     final int c = (fromMs == null ? 0 : 1) + (toMs == null ? 0 : 2);
     switch (c) {
       case 1: // from is given
-        from = Instant.ofEpochMilli(fromMs);
+        from = fromMs;
         break;
       case 2: // to is given
-        to = Instant.ofEpochMilli(toMs);
+        to = toMs;
         break;
       case 3: // both given // NOCS
-        from = Instant.ofEpochMilli(fromMs);
-        to = Instant.ofEpochMilli(toMs);
+        from = fromMs;
+        to = toMs;
         break;
       default:
         break;
     }
 
-    return this.service.get(landscapeToken);
-
-    // return this.service.get(landscapeToken).filter(t -> t.getStartTime().getSeconds() >= fromMs)
-    // .filter(t -> t.getEndTime().getSeconds() <= toMs);
+    return this.service.getByStartTimeAndEndTime(landscapeToken, from, to);
   }
 
 

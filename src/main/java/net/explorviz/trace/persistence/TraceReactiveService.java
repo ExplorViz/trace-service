@@ -24,12 +24,17 @@ public class TraceReactiveService {
     return this.traceDaoReactive.insertAsync(trace);
   }
 
-  public Uni<Void> add(final Trace trace) {
-    return this.traceDaoReactive.updateAsync(trace);
+  public Multi<Trace> getAllAsync(final String id) {
+    return this.traceDaoReactive.getAllAsync(id);
   }
 
-  public Multi<Trace> get(final String id) {
-    return this.traceDaoReactive.findByIdAsync(id);
+  public Multi<Trace> getByStartTimeAndEndTime(final String id, final long startTime,
+      final long endTime) {
+    return this.traceDaoReactive.getByStartTimeAndEndTime(id, startTime, endTime);
+  }
+
+  public Multi<Trace> getByTraceId(final String id, final String traceId) {
+    return this.traceDaoReactive.getByTraceId(id, traceId);
   }
 
 }
