@@ -22,13 +22,13 @@ public class TraceDaoProducer {
     final TraceMapper mapper = new TraceMapperBuilder(session).build();
 
     // instantiate our Daos
-    spanDynamicDaoReactive = mapper.traceDaoReactive();
+    this.spanDynamicDaoReactive = mapper.traceDaoReactive();
   }
 
   @Produces // NOPMD
   @ApplicationScoped
   /* default */ TraceDaoReactive produceSpanDynamicDaoReactive() {
-    return spanDynamicDaoReactive;
+    return this.spanDynamicDaoReactive;
   }
 
 }

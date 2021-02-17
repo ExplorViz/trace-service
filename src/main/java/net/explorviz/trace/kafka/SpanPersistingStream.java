@@ -15,7 +15,6 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
-import net.explorviz.trace.persistence.DbHelper;
 import net.explorviz.trace.persistence.TraceReactiveService;
 import net.explorviz.trace.service.TimestampHelper;
 import net.explorviz.trace.service.TraceAggregator;
@@ -57,16 +56,13 @@ public class SpanPersistingStream {
   private final SchemaRegistryClient registryClient;
   private final KafkaConfig config;
 
-  private final DbHelper dbHelper;
-
   private KafkaStreams streams;
 
   private final TraceReactiveService traceReactiveService;
 
   @Inject
   public SpanPersistingStream(final SchemaRegistryClient schemaRegistryClient,
-      final KafkaConfig config, final TraceReactiveService traceReactiveService,
-      final DbHelper dbHelper) {
+      final KafkaConfig config, final TraceReactiveService traceReactiveService) {
 
     this.registryClient = schemaRegistryClient;
     this.config = config;
@@ -75,12 +71,9 @@ public class SpanPersistingStream {
     this.setupStreamsConfig();
 
     this.traceReactiveService = traceReactiveService;
-
-    this.dbHelper = dbHelper;
   }
 
   /* default */ void onStart(@Observes final StartupEvent event) { // NOPMD
-    this.dbHelper.initialize();
     this.streams = new KafkaStreams(this.topology, this.streamsConfig);
     this.streams.cleanUp();
     this.streams.start();

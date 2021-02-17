@@ -13,7 +13,6 @@ import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Timestamp;
 import net.explorviz.avro.Trace;
 import net.explorviz.trace.TraceHelper;
-import net.explorviz.trace.persistence.DbHelper;
 import net.explorviz.trace.persistence.TraceReactiveService;
 import net.explorviz.trace.service.TimestampHelper;
 import org.apache.kafka.common.serialization.Serdes;
@@ -38,7 +37,6 @@ class SpanPersistingStreamTest {
   private SpecificAvroSerde<SpanDynamic> spanDynamicSerde;
 
   private TraceReactiveService traceReactiveService;
-  private DbHelper dbHelper;
 
   @BeforeEach
   void setUp() {
@@ -46,12 +44,11 @@ class SpanPersistingStreamTest {
     final MockSchemaRegistryClient mockSRC = new MockSchemaRegistryClient();
 
     this.traceReactiveService = Mockito.mock(TraceReactiveService.class);
-    this.dbHelper = Mockito.mock(DbHelper.class);
 
     final KafkaConfig config = Utils.testKafkaConfigs();
 
     final Topology topology =
-        new SpanPersistingStream(mockSRC, config, this.traceReactiveService, this.dbHelper)
+        new SpanPersistingStream(mockSRC, config, this.traceReactiveService)
             .getTopology();
 
     this.spanDynamicSerde = new SpecificAvroSerde<>(mockSRC);
