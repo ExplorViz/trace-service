@@ -3,6 +3,7 @@ plugins {
   id 'io.quarkus'
   id 'com.adarshr.test-logger' version '2.1.0'
   id "com.commercehub.gradle.plugin.avro" version "0.21.0"
+  id 'eclipse'
 }
 
 apply from: 'buildscripts/code-analysis.gradle'
@@ -13,6 +14,41 @@ repositories {
   maven {
     url "https://packages.confluent.io/maven/"
   }
+}
+
+sourceSets {
+  integrationTest {
+    java.srcDir file('src/integrationTest/java')
+    compileClasspath += sourceSets.main.output
+    runtimeClasspath += sourceSets.main.output
+  }
+}
+
+eclipse {
+  classpath {
+    plusConfigurations.add configurations.integrationTestRuntimeOnly
+    plusConfigurations.add configurations.integrationTestImplementation
+  }
+}
+
+task integrationTest(type: Test) {
+  useJUnitPlatform{
+    excludeTags 'slow'
+    includeEngines 'junit-jupiter'
+  }
+  description = 'Runs integration tests.'
+  group = 'verification'
+
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+  classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+configurations {
+  integrationTestImplementation.extendsFrom implementation
+  integrationTestRuntimeOnly.extendsFrom runtimeOnly
+
+  integrationTestImplementation.setCanBeResolved(true)
+  integrationTestRuntimeOnly.setCanBeResolved(true)
 }
 
 /**
@@ -49,10 +85,11 @@ dependencies {
   implementation group: 'com.datastax.oss', name: 'java-driver-query-builder', version: '4.8.0'
   
   implementation 'io.quarkus:quarkus-resteasy-mutiny'
+  
+  testImplementation(platform('org.junit:junit-bom:5.7.1'))
+  testImplementation('org.junit.jupiter:junit-jupiter')
 
   testImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'
-  testImplementation 'io.quarkus:quarkus-junit5'
-
   testImplementation group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
   testImplementation group: 'org.cassandraunit', name: 'cassandra-unit', version: '4.3.1.0'
 

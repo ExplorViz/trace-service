@@ -6,8 +6,6 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import javax.enterprise.context.ApplicationScoped;
@@ -15,9 +13,8 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
-import net.explorviz.trace.persistence.TraceReactiveService;
-import net.explorviz.trace.service.TimestampHelper;
 import net.explorviz.trace.service.TraceAggregator;
+import net.explorviz.trace.service.TraceRepository;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -58,11 +55,11 @@ public class SpanPersistingStream {
 
   private KafkaStreams streams;
 
-  private final TraceReactiveService traceReactiveService;
+  private final TraceRepository traceRepository;
 
   @Inject
   public SpanPersistingStream(final SchemaRegistryClient schemaRegistryClient,
-      final KafkaConfig config, final TraceReactiveService traceReactiveService) {
+      final KafkaConfig config, final TraceRepository traceRepository) {
 
     this.registryClient = schemaRegistryClient;
     this.config = config;
@@ -70,7 +67,7 @@ public class SpanPersistingStream {
     this.topology = this.buildTopology();
     this.setupStreamsConfig();
 
-    this.traceReactiveService = traceReactiveService;
+    this.traceRepository = traceRepository;
   }
 
   /* default */ void onStart(@Observes final StartupEvent event) { // NOPMD
@@ -128,36 +125,8 @@ public class SpanPersistingStream {
         LOGGER.debug("Received trace record: {}", t.toString());
       }
 
-      // Build Dao SpanList
-
-      final List<net.explorviz.trace.persistence.dao.SpanDynamic> daoSpanList = new ArrayList<>();
-
-      for (final SpanDynamic span : t.getSpanList()) {
-
-        final long startTime = TimestampHelper.toInstant(span.getStartTime()).toEpochMilli();
-        final long endTime = TimestampHelper.toInstant(span.getEndTime()).toEpochMilli();
-
-        final net.explorviz.trace.persistence.dao.SpanDynamic spanDynamicEntity =
-            new net.explorviz.trace.persistence.dao.SpanDynamic(span.getLandscapeToken(),
-                span.getSpanId(), span.getParentSpanId(), span.getTraceId(), startTime,
-                endTime, span.getHashCode());
-
-        daoSpanList.add(spanDynamicEntity);
-      }
-
-      // Build Dao Trace
-
-      final long startTime = TimestampHelper.toInstant(t.getStartTime()).toEpochMilli();
-      final long endTime = TimestampHelper.toInstant(t.getEndTime()).toEpochMilli();
-
-      final net.explorviz.trace.persistence.dao.Trace daoTrace =
-          new net.explorviz.trace.persistence.dao.Trace(t.getLandscapeToken(), t.getTraceId(),
-              startTime, endTime, t.getDuration(), t.getOverallRequestCount(),
-              t.getTraceCount(), daoSpanList);
-
-      LOGGER.info("Saved " + daoTrace.getLandscapeToken());
-
-      this.traceReactiveService.insert(daoTrace).await().indefinitely();
+      this.traceRepository.insert(t).await().indefinitely();
+      LOGGER.info("Saved " + t.getLandscapeToken());
 
     });
 

@@ -6,6 +6,7 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -13,14 +14,14 @@ import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Timestamp;
 import net.explorviz.avro.Trace;
 import net.explorviz.trace.TraceHelper;
-import net.explorviz.trace.persistence.TraceReactiveService;
 import net.explorviz.trace.service.TimestampHelper;
+import net.explorviz.trace.service.TraceRepository;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.TestInputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
-import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,26 +31,23 @@ import org.mockito.Mockito;
 
 class SpanPersistingStreamTest {
 
-  private static final Logger LOGGER = Logger.getLogger(SpanPersistingStreamTest.class);
-
   private TopologyTestDriver testDriver;
   private TestInputTopic<String, SpanDynamic> inputTopic;
   private SpecificAvroSerde<SpanDynamic> spanDynamicSerde;
 
-  private TraceReactiveService traceReactiveService;
+  private TraceRepository traceRepository;
 
   @BeforeEach
   void setUp() {
 
     final MockSchemaRegistryClient mockSRC = new MockSchemaRegistryClient();
 
-    this.traceReactiveService = Mockito.mock(TraceReactiveService.class);
+    this.traceRepository = Mockito.mock(TraceRepository.class);
 
     final KafkaConfig config = Utils.testKafkaConfigs();
 
     final Topology topology =
-        new SpanPersistingStream(mockSRC, config, this.traceReactiveService)
-            .getTopology();
+        new SpanPersistingStream(mockSRC, config, this.traceRepository).getTopology();
 
     this.spanDynamicSerde = new SpecificAvroSerde<>(mockSRC);
 
@@ -86,94 +84,136 @@ class SpanPersistingStreamTest {
 
     Mockito.doAnswer(i -> {
       final Trace inserted = i.getArgumentAt(0, Trace.class);
-      System.out.println("Test");
-      LOGGER.info("inserted" + inserted);
       mockSpanDB.add(inserted);
       return null;
-    }).when(this.traceReactiveService).insert(Matchers.any());
-
-    System.out.println("Test out");
+    }).when(this.traceRepository).insert(Matchers.any(Trace.class));
 
     final SpanDynamic testSpan = TraceHelper.randomSpan();
+
     this.inputTopic.pipeInput(testSpan.getTraceId(), testSpan);
     this.forceSuppression(testSpan.getStartTime());
 
     Assertions.assertEquals(1, mockSpanDB.size());
     Assertions.assertEquals(testSpan, mockSpanDB.get(0).getSpanList().get(0));
+  }
+
+  @Test
+  void testSingleTrace() {
+
+    final Map<String, Trace> mockSpanDB = new HashMap<>();
+    Mockito.doAnswer(i -> {
+      final Trace inserted = i.getArgumentAt(0, Trace.class);
+      final String key = inserted.getLandscapeToken() +
+          "::" + inserted.getTraceId();
+      mockSpanDB.put(key, inserted);
+      return null;
+    }).when(this.traceRepository).insert(Matchers.any(Trace.class));
+
+    final int spansPerTrace = 20;
+
+    final Trace testTrace = TraceHelper.randomTrace(spansPerTrace);
+    Timestamp t =
+        testTrace.getStartTime();
+    for (final SpanDynamic s : testTrace.getSpanList()) {
+      t =
+          Timestamp.newBuilder(t).setNanoAdjust(t.getNanoAdjust() + 1).build();
+      s.setStartTime(t);
+      this.inputTopic.pipeInput(s.getTraceId(), s);
+    }
+    this.forceSuppression(t);
+
+    final String k = testTrace.getLandscapeToken() + "::" + testTrace.getTraceId();
+    Assertions.assertEquals(1, mockSpanDB.size());
+    Assertions.assertEquals(testTrace.getSpanList().size(),
+        mockSpanDB.get(k).getSpanList().size());
+  }
+
+  @Test
+  void testMultipleTraces() {
+    final Map<String, Trace> mockSpanDB = new HashMap<>();
+
+    Mockito.doAnswer(i -> {
+      final Trace inserted = i.getArgumentAt(0, Trace.class);
+      final String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
+      mockSpanDB.put(key, inserted);
+      return null;
+    }).when(this.traceRepository).insert(Matchers.any(Trace.class));
+
+    final int spansPerTrace = 20;
+    final int traceAmount = 20;
+
+    // Create multiple traces that happen in parallel
+    final List<KeyValue<String, SpanDynamic>> traces = new ArrayList<>();
+    final Timestamp baseTime =
+        TraceHelper.randomTrace(1).getStartTime();
+    for (int i = 0; i < traceAmount; i++) {
+      final Trace testTrace = TraceHelper.randomTrace(spansPerTrace);
+      Timestamp t =
+          Timestamp.newBuilder(baseTime).build();
+      for (final SpanDynamic s : testTrace.getSpanList()) {
+        // Keep spans in one window
+        t = Timestamp.newBuilder(t).setNanoAdjust(t.getNanoAdjust() +
+            2).build();
+        s.setStartTime(t);
+        traces.add(new KeyValue<>(s.getTraceId(), s));
+      }
+    }
+
+    this.inputTopic.pipeKeyValueList(traces);
+    this.forceSuppression(baseTime);
+
+    for (final Map.Entry<String, Trace> entry : mockSpanDB.entrySet()) {
+      Assertions.assertEquals(spansPerTrace,
+          entry.getValue().getSpanList().size());
+    }
 
   }
-  /*
-   * @Test void testSingleTrace() throws PersistingException {
-   *
-   * final Map<String, Trace> mockSpanDB = new HashMap<>(); Mockito.doAnswer(i -> { final Trace
-   * inserted = i.getArgumentAt(0, Trace.class); final String key = inserted.getLandscapeToken() +
-   * "::" + inserted.getTraceId(); mockSpanDB.put(key, inserted); return null;
-   * }).when(this.mockRepo).saveTraceAsync(Matchers.any());
-   *
-   * final int spansPerTrace = 20;
-   *
-   * final Trace testTrace = TraceHelper.randomTrace(spansPerTrace); Timestamp t =
-   * testTrace.getStartTime(); for (final SpanDynamic s : testTrace.getSpanList()) { t =
-   * Timestamp.newBuilder(t).setNanoAdjust(t.getNanoAdjust() + 1).build(); s.setStartTime(t);
-   * this.inputTopic.pipeInput(s.getTraceId(), s); } this.forceSuppression(t);
-   *
-   * final String k = testTrace.getLandscapeToken() + "::" + testTrace.getTraceId();
-   * Assertions.assertEquals(1, mockSpanDB.size());
-   * Assertions.assertEquals(testTrace.getSpanList().size(),
-   * mockSpanDB.get(k).getSpanList().size()); }
-   *
-   * @Test void testMultipleTraces() throws PersistingException { final Map<String, Trace>
-   * mockSpanDB = new HashMap<>(); Mockito.doAnswer(i -> { final Trace inserted = i.getArgumentAt(0,
-   * Trace.class); final String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
-   * mockSpanDB.put(key, inserted); return null;
-   * }).when(this.mockRepo).saveTraceAsync(Matchers.any());
-   *
-   * final int spansPerTrace = 20; final int traceAmount = 20;
-   *
-   * // Create multiple traces that happen in parallel final List<KeyValue<String, SpanDynamic>>
-   * traces = new ArrayList<>(); final Timestamp baseTime =
-   * TraceHelper.randomTrace(1).getStartTime(); for (int i = 0; i < traceAmount; i++) { final Trace
-   * testTrace = TraceHelper.randomTrace(spansPerTrace); Timestamp t =
-   * Timestamp.newBuilder(baseTime).build(); for (final SpanDynamic s : testTrace.getSpanList()) {
-   * // Keep spans in one window t = Timestamp.newBuilder(t).setNanoAdjust(t.getNanoAdjust() +
-   * 2).build(); s.setStartTime(t); traces.add(new KeyValue<>(s.getTraceId(), s)); } }
-   *
-   * this.inputTopic.pipeKeyValueList(traces); this.forceSuppression(baseTime);
-   *
-   * Assertions.assertEquals(traceAmount, mockSpanDB.size()); for (final Map.Entry<String, Trace>
-   * entry : mockSpanDB.entrySet()) { Assertions.assertEquals(spansPerTrace,
-   * entry.getValue().getSpanList().size()); }
-   *
-   * }
-   *
-   *
-   * @Test void testOutOfWindow() { final Map<String, Trace> mockSpanDB = new HashMap<>();
-   * Mockito.doAnswer(i -> { final Trace inserted = i.getArgumentAt(0, Trace.class); final String
-   * key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
-   * mockSpanDB.computeIfPresent(key, (k, v) -> { v.getSpanList().addAll(inserted.getSpanList());
-   * return v; }); mockSpanDB.putIfAbsent(key, inserted); return null;
-   * }).when(this.mockRepo).saveTraceAsync(Matchers.any());
-   *
-   * final int spansPerTrace = 20;
-   *
-   * final Trace testTrace = TraceHelper.randomTrace(spansPerTrace); Timestamp ts =
-   * TraceHelper.randomTrace(1).getStartTime(); for (int i = 0; i < testTrace.getSpanList().size();
-   * i++) { final SpanDynamic s = testTrace.getSpanList().get(i); if (i <
-   * testTrace.getSpanList().size() - 1) { ts =
-   * Timestamp.newBuilder(ts).setNanoAdjust(ts.getNanoAdjust() + 1).build(); } else { // Last span
-   * arrives out of window final long secs =
-   * Duration.ofMillis(SpanPersistingStream.WINDOW_SIZE_MS).toSeconds(); ts =
-   * Timestamp.newBuilder(ts) .setSeconds(ts.getSeconds() + secs).build(); } s.setStartTime(ts);
-   * this.inputTopic.pipeInput(s.getTraceId(), s); }
-   *
-   * this.forceSuppression(ts);
-   *
-   * final String k = testTrace.getLandscapeToken() + "::" + testTrace.getTraceId();
-   * Assertions.assertEquals(1, mockSpanDB.size());
-   * Assertions.assertEquals(testTrace.getSpanList().size(),
-   * mockSpanDB.get(k).getSpanList().size()); }
-   *
-   */
+
+
+  @Test
+  void testOutOfWindow() {
+
+    // callback to get traces after analysis
+    final Map<String, Trace> mockSpanDB = new HashMap<>();
+    Mockito.doAnswer(i -> {
+      final Trace inserted = i.getArgumentAt(0, Trace.class);
+      final String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
+      mockSpanDB.computeIfPresent(key, (k, v) -> {
+        v.getSpanList().addAll(inserted.getSpanList());
+        return v;
+      });
+      mockSpanDB.putIfAbsent(key, inserted);
+      return null;
+    }).when(this.traceRepository).insert(Matchers.any(Trace.class));
+
+
+    // push spans on topic
+    final int spansPerTrace = 20;
+
+    final Trace testTrace = TraceHelper.randomTrace(spansPerTrace);
+    Timestamp ts = TraceHelper.randomTrace(1).getStartTime();
+    for (int i = 0; i < testTrace.getSpanList().size(); i++) {
+      final SpanDynamic s = testTrace.getSpanList().get(i);
+      if (i < testTrace.getSpanList().size() - 1) {
+        ts = Timestamp.newBuilder(ts).setNanoAdjust(ts.getNanoAdjust() + 1).build();
+      } else {
+        // Last span final arrives out final of window
+        final long secs = Duration.ofMillis(SpanPersistingStream.WINDOW_SIZE_MS).toSeconds();
+        ts =
+            Timestamp.newBuilder(ts).setSeconds(ts.getSeconds() + secs).build();
+      }
+      s.setStartTime(ts);
+      this.inputTopic.pipeInput(s.getTraceId(), s);
+    }
+
+    this.forceSuppression(ts);
+
+    final String k = testTrace.getLandscapeToken() + "::" + testTrace.getTraceId();
+    Assertions.assertEquals(1, mockSpanDB.size());
+    Assertions.assertEquals(testTrace.getSpanList().size(),
+        mockSpanDB.get(k).getSpanList().size());
+  }
+
 
   /**
    * Forces the suppression to emit results by sending a dummy event with a timestamp larger than
