@@ -22,12 +22,19 @@ sourceSets {
     compileClasspath += sourceSets.main.output
     runtimeClasspath += sourceSets.main.output
   }
+  apiTest {
+    java.srcDir file('src/apiTest/java')
+    compileClasspath += sourceSets.main.output
+    runtimeClasspath += sourceSets.main.output
+  }
 }
 
 eclipse {
   classpath {
     plusConfigurations.add configurations.integrationTestRuntimeOnly
     plusConfigurations.add configurations.integrationTestImplementation
+    plusConfigurations.add configurations.apiTestRuntimeOnly
+    plusConfigurations.add configurations.apiTestImplementation
   }
 }
 
@@ -43,12 +50,28 @@ task integrationTest(type: Test) {
   classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
+task apiTest(type: Test) {
+  useJUnitPlatform{
+    excludeTags 'slow'
+    includeEngines 'junit-jupiter'
+  }
+  description = 'Runs api tests.'
+  group = 'verification'
+
+  testClassesDirs = sourceSets.apiTest.output.classesDirs
+  classpath = sourceSets.apiTest.runtimeClasspath
+}
+
 configurations {
   integrationTestImplementation.extendsFrom implementation
   integrationTestRuntimeOnly.extendsFrom runtimeOnly
+  apiTestImplementation.extendsFrom implementation
+  apiTestRuntimeOnly.extendsFrom runtimeOnly
 
   integrationTestImplementation.setCanBeResolved(true)
   integrationTestRuntimeOnly.setCanBeResolved(true)
+  apiTestImplementation.setCanBeResolved(true)
+  apiTestRuntimeOnly.setCanBeResolved(true)
 }
 
 /**
@@ -64,15 +87,12 @@ dependencies {
   implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
   
   annotationProcessor group: 'com.datastax.oss', name: 'java-driver-mapper-processor', version: '4.10.0'
-  compile group: 'com.datastax.oss', name: 'java-driver-mapper-runtime', version: '4.10.0'  
+  implementation group: 'com.datastax.oss', name: 'java-driver-mapper-runtime', version: '4.10.0'  
   implementation 'com.datastax.oss.quarkus:cassandra-quarkus-client'
 
   implementation 'io.quarkus:quarkus-kafka-streams'
   implementation 'io.quarkus:quarkus-resteasy'
   implementation 'io.quarkus:quarkus-resteasy-jackson'
-  
-  //implementation 'io.quarkus:quarkus-mutiny'
-  //implementation 'io.quarkus:quarkus-resteasy-mutiny'
 
   implementation 'io.opencensus:opencensus-proto:0.2.0'
 
@@ -89,11 +109,13 @@ dependencies {
   testImplementation(platform('org.junit:junit-bom:5.7.1'))
   testImplementation('org.junit.jupiter:junit-jupiter')
 
-  testImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'
-  testImplementation group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
-  testImplementation group: 'org.cassandraunit', name: 'cassandra-unit', version: '4.3.1.0'
+  integrationTestImplementation(platform('org.junit:junit-bom:5.7.1'))
+  integrationTestImplementation('org.junit.jupiter:junit-jupiter')
+  integrationTestImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'
+  integrationTestImplementation group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
 
-
+  apiTestImplementation(platform('org.junit:junit-bom:5.7.1'))
+  apiTestImplementation('org.junit.jupiter:junit-jupiter')
 }
 
 group 'net.explorviz'
