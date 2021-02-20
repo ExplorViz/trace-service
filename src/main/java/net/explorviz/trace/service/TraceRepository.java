@@ -4,11 +4,16 @@ import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 import java.util.ArrayList;
 import java.util.List;
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.trace.persistence.TraceReactiveService;
 import net.explorviz.trace.persistence.dao.Trace;
 
+/**
+ * Repository to manage instances of a {@link Trace}.
+ */
+@ApplicationScoped
 public class TraceRepository {
 
   private final TraceReactiveService traceReactiveService;
@@ -62,7 +67,7 @@ public class TraceRepository {
     final long startTime = TimestampHelper.toInstant(t.getStartTime()).toEpochMilli();
     final long endTime = TimestampHelper.toInstant(t.getEndTime()).toEpochMilli();
 
-    return new net.explorviz.trace.persistence.dao.Trace(t.getLandscapeToken(), t.getTraceId(),
+    return new Trace(t.getLandscapeToken(), t.getTraceId(),
         startTime, endTime, t.getDuration(), t.getOverallRequestCount(),
         t.getTraceCount(), daoSpanList);
   }

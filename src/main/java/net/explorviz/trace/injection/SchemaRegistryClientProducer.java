@@ -16,8 +16,8 @@ public class SchemaRegistryClientProducer {
 
   private static final int IDENTITY_MAP_CAPACITY = 10;
 
+  @SuppressWarnings("PMD")
   @ConfigProperty(name = "explorviz.schema-registry.url")
-  // NOPMD
   /* default */ String schemaRegistryUrl; // NOCS
 
   @Produces

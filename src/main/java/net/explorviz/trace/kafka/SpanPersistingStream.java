@@ -119,15 +119,11 @@ public class SpanPersistingStream {
 
     traceStream.foreach((k, t) -> {
 
-      LOGGER.info("Received " + t.getLandscapeToken());
-
       if (LOGGER.isDebugEnabled()) {
         LOGGER.debug("Received trace record: {}", t.toString());
       }
 
       this.traceRepository.insert(t).await().indefinitely();
-      LOGGER.info("Saved " + t.getLandscapeToken());
-
     });
 
     return builder.build();

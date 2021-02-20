@@ -19,7 +19,8 @@ public interface TraceDaoReactive {
   MutinyMappedReactiveResultSet<Trace> getAllAsync(String id);
 
   @Select(
-      customWhereClause = "landscape_token = :id and start_time >= :startTime and start_time <= :endTime")
+      customWhereClause = "landscape_token = :id and start_time >= :startTime and "
+          + "start_time <= :endTime")
   MutinyMappedReactiveResultSet<Trace> getByStartTimeAndEndTime(String id, long startTime,
       long endTime);
 

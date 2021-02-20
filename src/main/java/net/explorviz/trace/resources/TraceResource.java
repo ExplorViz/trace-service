@@ -9,8 +9,8 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
-import net.explorviz.trace.persistence.TraceReactiveService;
 import net.explorviz.trace.persistence.dao.Trace;
+import net.explorviz.trace.service.TraceRepository;
 
 /**
  * HTTP resource for accessing traces.
@@ -20,11 +20,11 @@ public class TraceResource {
 
   private static final long MIN_SECONDS = 1_577_836_800; // 01.01.2020 00:00
 
-  private final TraceReactiveService service;
+  private final TraceRepository repository;
 
   @Inject
-  public TraceResource(final TraceReactiveService service) {
-    this.service = service;
+  public TraceResource(final TraceRepository repository) {
+    this.repository = repository;
   }
 
   @GET
@@ -32,7 +32,7 @@ public class TraceResource {
   @Produces(MediaType.APPLICATION_JSON)
   public Multi<Trace> getTrace(@PathParam("token") final String landscapeToken,
       @PathParam("traceid") final String traceId) {
-    return this.service.getByTraceId(landscapeToken, traceId);
+    return this.repository.getByTraceId(landscapeToken, traceId);
   }
 
   @GET
@@ -61,7 +61,7 @@ public class TraceResource {
         break;
     }
 
-    return this.service.getByStartTimeAndEndTime(landscapeToken, from, to);
+    return this.repository.getByStartTimeAndEndTime(landscapeToken, from, to);
   }
 
 
