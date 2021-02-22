@@ -13,7 +13,7 @@ import java.util.Properties;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Timestamp;
 import net.explorviz.avro.Trace;
-import net.explorviz.trace.TraceHelper;
+import net.explorviz.trace.persistence.cassandra.TraceHelper;
 import net.explorviz.trace.service.TimestampHelper;
 import net.explorviz.trace.service.TraceRepository;
 import org.apache.kafka.common.serialization.Serdes;

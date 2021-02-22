@@ -85,16 +85,18 @@ dependencies {
   
   
   // Unit Testing
-  testImplementation 'org.junit.jupiter:junit-jupiter'
+  testImplementation 'io.quarkus:quarkus-junit5'
+  
+  // these should be moved to integrationTestImplementation when Class loading bug is fixed for QuarkusTest
+  testImplementation 'io.rest-assured:rest-assured'
+  testImplementation 'com.datastax.oss.quarkus:cassandra-quarkus-test-framework'
+  testImplementation "org.testcontainers:kafka:1.15.2"
 
   // Integration Testing  
-  integrationTestImplementation 'io.quarkus:quarkus-junit5'
-  integrationTestImplementation 'io.rest-assured:rest-assured'
+  integrationTestImplementation 'io.quarkus:quarkus-junit5'  
   integrationTestImplementation 'org.mockito:mockito-junit-jupiter'
   
-  integrationTestImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'
-   
-  integrationTestImplementation 'com.datastax.oss.quarkus:cassandra-quarkus-test-framework'
+  integrationTestImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'  
 }
 
 group 'net.explorviz'
