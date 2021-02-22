@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 class SpanPersistingStreamTest {
@@ -84,10 +84,10 @@ class SpanPersistingStreamTest {
     final List<Trace> mockSpanDB = new ArrayList<>();
 
     Mockito.doAnswer(i -> {
-      final Trace inserted = i.getArgumentAt(0, Trace.class);
+      final Trace inserted = i.getArgument(0, Trace.class);
       mockSpanDB.add(inserted);
       return null;
-    }).when(this.traceRepository).insert(Matchers.any(Trace.class));
+    }).when(this.traceRepository).insert(ArgumentMatchers.any(Trace.class));
 
     final SpanDynamic testSpan = TraceHelper.randomSpan();
 
@@ -103,12 +103,12 @@ class SpanPersistingStreamTest {
 
     final Map<String, Trace> mockSpanDB = new HashMap<>();
     Mockito.doAnswer(i -> {
-      final Trace inserted = i.getArgumentAt(0, Trace.class);
+      final Trace inserted = i.getArgument(0, Trace.class);
       final String key = inserted.getLandscapeToken() +
           "::" + inserted.getTraceId();
       mockSpanDB.put(key, inserted);
       return null;
-    }).when(this.traceRepository).insert(Matchers.any(Trace.class));
+    }).when(this.traceRepository).insert(ArgumentMatchers.any(Trace.class));
 
     final int spansPerTrace = 20;
 
@@ -134,11 +134,11 @@ class SpanPersistingStreamTest {
     final Map<String, Trace> mockSpanDB = new HashMap<>();
 
     Mockito.doAnswer(i -> {
-      final Trace inserted = i.getArgumentAt(0, Trace.class);
+      final Trace inserted = i.getArgument(0, Trace.class);
       final String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
       mockSpanDB.put(key, inserted);
       return null;
-    }).when(this.traceRepository).insert(Matchers.any(Trace.class));
+    }).when(this.traceRepository).insert(ArgumentMatchers.any(Trace.class));
 
     final int spansPerTrace = 20;
     final int traceAmount = 20;
@@ -178,7 +178,7 @@ class SpanPersistingStreamTest {
     // callback to get traces after analysis
     final Map<String, Trace> mockSpanDB = new HashMap<>();
     Mockito.doAnswer(i -> {
-      final Trace inserted = i.getArgumentAt(0, Trace.class);
+      final Trace inserted = i.getArgument(0, Trace.class);
       final String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
       mockSpanDB.computeIfPresent(key, (k, v) -> {
         v.getSpanList().addAll(inserted.getSpanList());
@@ -186,7 +186,7 @@ class SpanPersistingStreamTest {
       });
       mockSpanDB.putIfAbsent(key, inserted);
       return null;
-    }).when(this.traceRepository).insert(Matchers.any(Trace.class));
+    }).when(this.traceRepository).insert(ArgumentMatchers.any(Trace.class));
 
 
     // push spans on topic

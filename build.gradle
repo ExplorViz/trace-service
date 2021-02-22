@@ -21,11 +21,7 @@ sourceSets {
     java.srcDir file('src/integrationTest/java')
     compileClasspath += sourceSets.main.output
     runtimeClasspath += sourceSets.main.output
-  }
-  apiTest {
-    java.srcDir file('src/apiTest/java')
-    compileClasspath += sourceSets.main.output
-    runtimeClasspath += sourceSets.main.output
+    println(java.outputDir)
   }
 }
 
@@ -33,45 +29,26 @@ eclipse {
   classpath {
     plusConfigurations.add configurations.integrationTestRuntimeOnly
     plusConfigurations.add configurations.integrationTestImplementation
-    plusConfigurations.add configurations.apiTestRuntimeOnly
-    plusConfigurations.add configurations.apiTestImplementation
   }
 }
 
 task integrationTest(type: Test) {
-  useJUnitPlatform{
-    excludeTags 'slow'
-    includeEngines 'junit-jupiter'
-  }
   description = 'Runs integration tests.'
   group = 'verification'
 
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
   classpath = sourceSets.integrationTest.runtimeClasspath
+  shouldRunAfter test
 }
 
-task apiTest(type: Test) {
-  useJUnitPlatform{
-    excludeTags 'slow'
-    includeEngines 'junit-jupiter'
-  }
-  description = 'Runs api tests.'
-  group = 'verification'
-
-  testClassesDirs = sourceSets.apiTest.output.classesDirs
-  classpath = sourceSets.apiTest.runtimeClasspath
-}
+check.dependsOn integrationTest
 
 configurations {
   integrationTestImplementation.extendsFrom implementation
   integrationTestRuntimeOnly.extendsFrom runtimeOnly
-  apiTestImplementation.extendsFrom implementation
-  apiTestRuntimeOnly.extendsFrom runtimeOnly
 
   integrationTestImplementation.setCanBeResolved(true)
   integrationTestRuntimeOnly.setCanBeResolved(true)
-  apiTestImplementation.setCanBeResolved(true)
-  apiTestRuntimeOnly.setCanBeResolved(true)
 }
 
 /**
@@ -86,36 +63,39 @@ dependencies {
   
   implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
   
+  implementation group: 'io.quarkus', name: 'quarkus-bom', version: '1.11.0.Final', ext: 'pom'
+  
+  // Cassandra
+  implementation group: 'com.datastax.oss.quarkus', name: 'cassandra-quarkus-bom', version: '1.0.0', ext: 'pom'  
   annotationProcessor group: 'com.datastax.oss', name: 'java-driver-mapper-processor', version: '4.10.0'
-  implementation group: 'com.datastax.oss', name: 'java-driver-mapper-runtime', version: '4.10.0'  
+  implementation 'com.datastax.oss:java-driver-mapper-runtime'
   implementation 'com.datastax.oss.quarkus:cassandra-quarkus-client'
+  implementation 'com.datastax.oss:java-driver-core'
+  implementation 'com.datastax.oss:java-driver-query-builder'
 
+  // Kafka
   implementation 'io.quarkus:quarkus-kafka-streams'
   implementation 'io.quarkus:quarkus-resteasy'
   implementation 'io.quarkus:quarkus-resteasy-jackson'
-
-  implementation 'io.opencensus:opencensus-proto:0.2.0'
-
-  implementation group: 'io.quarkus', name: 'quarkus-smallrye-reactive-messaging-kafka'
-
   implementation group: 'io.confluent', name: 'kafka-avro-serializer', version: '5.5.0'
   implementation group: 'io.confluent', name: 'kafka-streams-avro-serde', version: '5.5.0'
+  implementation 'io.quarkus:quarkus-smallrye-reactive-messaging-kafka' 
 
-  implementation group: 'com.datastax.oss', name: 'java-driver-core', version: '4.8.0'
-  implementation group: 'com.datastax.oss', name: 'java-driver-query-builder', version: '4.8.0'
-  
+  // Reactive Programming   
   implementation 'io.quarkus:quarkus-resteasy-mutiny'
   
-  testImplementation(platform('org.junit:junit-bom:5.7.1'))
-  testImplementation('org.junit.jupiter:junit-jupiter')
+  
+  // Unit Testing
+  testImplementation 'org.junit.jupiter:junit-jupiter'
 
-  integrationTestImplementation(platform('org.junit:junit-bom:5.7.1'))
-  integrationTestImplementation('org.junit.jupiter:junit-jupiter')
+  // Integration Testing
+  integrationTestImplementation 'org.junit.jupiter:junit-jupiter'
   integrationTestImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'
-  integrationTestImplementation group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
+  integrationTestImplementation 'org.mockito:mockito-junit-jupiter'
 
-  apiTestImplementation(platform('org.junit:junit-bom:5.7.1'))
-  apiTestImplementation('org.junit.jupiter:junit-jupiter')
+  integrationTestImplementation 'io.rest-assured:rest-assured'
+  integrationTestImplementation 'com.datastax.oss.quarkus:cassandra-quarkus-test-framework'
+  integrationTestImplementation 'io.quarkus:quarkus-junit5'
 }
 
 group 'net.explorviz'
@@ -135,7 +115,7 @@ java {
   targetCompatibility = JavaVersion.VERSION_11
 }
 
-sourceSets.main.java.srcDirs = ['build/generated-main-avro-java', 'src/main/java', 'build/generated/sources/annotationProcessor/java/main']
+sourceSets.main.java.srcDirs = ['build/generated-main-avro-java', 'src/main/java', 'build/generated/sources/annotationProcessor/java/main', 'src/integrationTest/java',]
 
 test {
   systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
