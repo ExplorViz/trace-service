@@ -87,14 +87,14 @@ dependencies {
   // Unit Testing
   testImplementation 'org.junit.jupiter:junit-jupiter'
 
-  // Integration Testing
-  integrationTestImplementation 'org.junit.jupiter:junit-jupiter'
-  integrationTestImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'
-  integrationTestImplementation 'org.mockito:mockito-junit-jupiter'
-
-  integrationTestImplementation 'io.rest-assured:rest-assured'
-  integrationTestImplementation 'com.datastax.oss.quarkus:cassandra-quarkus-test-framework'
+  // Integration Testing  
   integrationTestImplementation 'io.quarkus:quarkus-junit5'
+  integrationTestImplementation 'io.rest-assured:rest-assured'
+  integrationTestImplementation 'org.mockito:mockito-junit-jupiter'
+  
+  integrationTestImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'
+   
+  integrationTestImplementation 'com.datastax.oss.quarkus:cassandra-quarkus-test-framework'
 }
 
 group 'net.explorviz'

@@ -20,22 +20,18 @@ build:
   tags:
     - exec-docker
   script: ./gradlew --build-cache assemble
-  cache:
-    policy: push
-    paths:
-      - build
-      - .gradle
 
 unit-test:
   stage: test
   tags:
     - exec-docker
   script: ./gradlew test --continue
-  cache:
-    policy: pull
-    paths:
-      - build
-      - .gradle
+
+integration-test:
+  stage: test
+  tags:
+    - exec-docker
+  script: ./gradlew integrationTest --continue
 
 pmd:
   stage: code-analysis

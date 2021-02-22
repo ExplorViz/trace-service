@@ -1,15 +1,12 @@
 package net.explorviz.trace.persistence.cassandra;
 
-import com.datastax.oss.quarkus.test.CassandraTestResource;
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.TestProfile;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
-@QuarkusTestResource(CassandraTestResource.class)
-@TestProfile(CassandraTestProfile.class)
-class TraceResourceIt {
+// @QuarkusTestResource(CassandraTestResource.class)
+// @TestProfile(CassandraTestProfile.class)
+public class TraceResourceIt {
 
   // Tests
   // - insert and retrieve single trace with 5 spans
