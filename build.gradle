@@ -120,3 +120,7 @@ sourceSets.main.java.srcDirs = ['build/generated-main-avro-java', 'src/main/java
 test {
   systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
 }
+
+integrationTest {
+  systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+}

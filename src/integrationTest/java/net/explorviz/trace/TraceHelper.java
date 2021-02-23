@@ -13,7 +13,7 @@ import org.apache.commons.lang3.RandomUtils;
 /**
  * Utility class containing helper methods to create traces and spans.
  */
-public final class TraceDaoHelper {
+public final class TraceHelper {
 
 
   /**
