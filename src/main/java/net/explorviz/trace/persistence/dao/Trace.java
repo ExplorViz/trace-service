@@ -4,6 +4,7 @@ import com.datastax.oss.driver.api.mapper.annotations.ClusteringColumn;
 import com.datastax.oss.driver.api.mapper.annotations.Entity;
 import com.datastax.oss.driver.api.mapper.annotations.PartitionKey;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Bean for a Trace.
@@ -110,6 +111,64 @@ public class Trace {
   public void setSpanList(final List<SpanDynamic> spanList) {
     this.spanList = spanList;
   }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.duration, this.endTime, this.landscapeToken, this.overallRequestCount,
+        this.spanList, this.startTime, this.traceCount, this.traceId);
+  }
+
+  @Override // NOCS
+  public boolean equals(final Object obj) { // NOPMD
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (this.getClass() != obj.getClass()) {
+      return false;
+    }
+    final Trace other = (Trace) obj;
+    if (this.duration != other.duration) {
+      return false;
+    }
+    if (this.endTime != other.endTime) {
+      return false;
+    }
+    if (this.landscapeToken == null) {
+      if (other.landscapeToken != null) {
+        return false;
+      }
+    } else if (!this.landscapeToken.equals(other.landscapeToken)) {
+      return false;
+    }
+    if (this.overallRequestCount != other.overallRequestCount) {
+      return false;
+    }
+    if (this.spanList == null) {
+      if (other.spanList != null) {
+        return false;
+      }
+    } else if (!this.spanList.equals(other.spanList)) {
+      return false;
+    }
+    if (this.startTime != other.startTime) {
+      return false;
+    }
+    if (this.traceCount != other.traceCount) {
+      return false;
+    }
+    if (this.traceId == null) {
+      if (other.traceId != null) {
+        return false;
+      }
+    } else if (!this.traceId.equals(other.traceId)) {
+      return false;
+    }
+    return true;
+  }
+
 
 
 }
