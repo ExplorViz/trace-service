@@ -41,8 +41,9 @@ public class TraceResourceIt {
 
     this.repository.insert(expected).await().indefinitely();
 
-    Trace got = this.repository.getByTraceId(expected.getLandscapeToken(), expected.getTraceId())
-        .collectItems().first().await().indefinitely();
+    final Trace got =
+        this.repository.getByTraceId(expected.getLandscapeToken(), expected.getTraceId())
+            .collectItems().first().await().indefinitely();
 
 
     Assertions.assertEquals(expected, got);

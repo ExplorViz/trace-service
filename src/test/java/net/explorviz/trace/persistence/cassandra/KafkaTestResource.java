@@ -17,7 +17,6 @@ public class KafkaTestResource implements QuarkusTestResourceLifecycleManager {
   private static final KafkaContainer KAFKA =
       new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka"));
 
-
   @Override
   public Map<String, String> start() {
     KAFKA.start();
