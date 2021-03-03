@@ -147,10 +147,10 @@ public class TraceResourceIt {
     final Trace expected3 =
         TraceConverter.convertTraceToDao(
             TraceHelper.randomTrace(5, landscapeToken, fromSeconds1, toSeconds1));
-    final Trace expected4 =
+    final Trace remainder4 =
         TraceConverter.convertTraceToDao(
             TraceHelper.randomTrace(5, landscapeToken, fromSeconds2, toSeconds2));
-    final Trace expected5 =
+    final Trace remainder5 =
         TraceConverter.convertTraceToDao(
             TraceHelper.randomTrace(5, landscapeToken, fromSeconds2, toSeconds2));
 
@@ -169,8 +169,8 @@ public class TraceResourceIt {
     this.repository.insert(expected1).await().indefinitely();
     this.repository.insert(expected2).await().indefinitely();
     this.repository.insert(expected3).await().indefinitely();
-    this.repository.insert(expected4).await().indefinitely();
-    this.repository.insert(expected5).await().indefinitely();
+    this.repository.insert(remainder4).await().indefinitely();
+    this.repository.insert(remainder5).await().indefinitely();
 
     final List<Trace> actualTraceList =
         this.repository.getByStartTimeAndEndTime(landscapeToken, filteringKey, filteringKey + 1000)
