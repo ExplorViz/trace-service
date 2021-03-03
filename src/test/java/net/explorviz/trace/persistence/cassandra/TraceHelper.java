@@ -74,14 +74,21 @@ public final class TraceHelper {
    */
   public static Trace randomTrace(final int spanAmount) {
 
+    final String landscapeToken = RandomStringUtils.random(32, true, true);
+
+    return randomTrace(spanAmount, landscapeToken);
+
+  }
+
+  public static Trace randomTrace(final int spanAmount, final String landscapeToken) {
+
     final String traceId = RandomStringUtils.random(6, true, true);
-    final String landscapeToke = RandomStringUtils.random(32, true, true);
 
     Timestamp start = null;
     Timestamp end = null;
     final List<SpanDynamic> spans = new ArrayList<>();
     for (int i = 0; i < spanAmount; i++) {
-      final SpanDynamic s = randomSpan(traceId, landscapeToke);
+      final SpanDynamic s = randomSpan(traceId, landscapeToken);
       if (start == null || TimestampHelper.isBefore(s.getStartTime(), start)) {
         start = s.getStartTime();
       }
@@ -92,7 +99,7 @@ public final class TraceHelper {
     }
 
     return Trace.newBuilder()
-        .setLandscapeToken(landscapeToke)
+        .setLandscapeToken(landscapeToken)
         .setTraceId(traceId)
         .setStartTime(start)
         .setEndTime(end)

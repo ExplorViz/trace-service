@@ -24,17 +24,17 @@ public class TraceReactiveService {
     return this.traceDaoReactive.insertAsync(trace);
   }
 
-  public Multi<Trace> getAllAsync(final String id) {
-    return this.traceDaoReactive.getAllAsync(id);
+  public Multi<Trace> getAllAsync(final String landscapeToken) {
+    return this.traceDaoReactive.getAllAsync(landscapeToken);
   }
 
-  public Multi<Trace> getByStartTimeAndEndTime(final String id, final long startTime,
+  public Multi<Trace> getByStartTimeAndEndTime(final String landscapeToken, final long startTime,
       final long endTime) {
-    return this.traceDaoReactive.getByStartTimeAndEndTime(id, startTime, endTime);
+    return this.traceDaoReactive.getByStartTimeAndEndTime(landscapeToken, startTime, endTime);
   }
 
-  public Multi<Trace> getByTraceId(final String id, final String traceId) {
-    return this.traceDaoReactive.getByTraceId(id, traceId);
+  public Multi<Trace> getByTraceId(final String landscapeToken, final String traceId) {
+    return this.traceDaoReactive.getByTraceId(landscapeToken, traceId);
   }
 
 }

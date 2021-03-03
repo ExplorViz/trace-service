@@ -45,8 +45,7 @@ public class CassandraCustomTestResource extends CassandraTestResource {
   @Override
   public void stop() {
     if (cassandraContainer != null && cassandraContainer.isRunning()) {
-      LOGGER.info("HALLO ALEX CASSANDRA STOP");
-      // cassandraContainer.stop();
+      cassandraContainer.stop();
     }
   }
 
