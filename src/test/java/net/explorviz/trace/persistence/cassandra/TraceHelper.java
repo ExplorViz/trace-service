@@ -40,6 +40,7 @@ public final class TraceHelper {
   public static SpanDynamic randomSpan(final String traceId, final String token) {
     final long maxSeconds = 1609459200;
     final long minSeconds = 1577836800;
+
     final int maxNanos = Instant.MAX.getNano();
 
     return SpanDynamic.newBuilder()
@@ -53,12 +54,31 @@ public final class TraceHelper {
         .setSpanId(RandomStringUtils.random(8, true, true))
         .setHashCode(RandomStringUtils.random(256, true, true))
         .build();
+
+  }
+
+  public static SpanDynamic randomSpanFixedTimeInterval(final String traceId, final String token,
+      final long fromSeconds, final long toSeconds) {
+
+    final int maxNanos = Instant.MAX.getNano();
+
+    return SpanDynamic.newBuilder()
+        .setLandscapeToken(token)
+        .setStartTime(new Timestamp(fromSeconds,
+            RandomUtils.nextInt(0, maxNanos)))
+        .setEndTime(new Timestamp(toSeconds,
+            RandomUtils.nextInt(0, maxNanos)))
+        .setTraceId(traceId)
+        .setParentSpanId(RandomStringUtils.random(8, true, true))
+        .setSpanId(RandomStringUtils.random(8, true, true))
+        .setHashCode(RandomStringUtils.random(256, true, true))
+        .build();
   }
 
   /**
    * Creates a random trace such that:
    * <ul>
-   * <li>The start- and end-time correspond to the span lis</li>
+   * <li>The start- and end-time correspond to the span list</li>
    * <li>All spans have the same traceId</li>
    * <li>The trace and all spans have the same landscape token</li>
    * </ul>
@@ -66,7 +86,7 @@ public final class TraceHelper {
    * <ul>
    * <li>Parent span IDs are completely random do not match spans in the same trace</li>
    * <li>The hash codes are truly random</li>
-   * <li>Start- and End-Times are random points anywhere in the year 2020</li>
+   * <li>Start- and End-Times (of spans) are random points anywhere in the year 2020</li>
    * </ul>
    *
    * @param spanAmount the amount of spans to include into the trace, must be at least 1
@@ -89,6 +109,38 @@ public final class TraceHelper {
     final List<SpanDynamic> spans = new ArrayList<>();
     for (int i = 0; i < spanAmount; i++) {
       final SpanDynamic s = randomSpan(traceId, landscapeToken);
+      if (start == null || TimestampHelper.isBefore(s.getStartTime(), start)) {
+        start = s.getStartTime();
+      }
+      if (end == null || TimestampHelper.isAfter(s.getEndTime(), end)) {
+        end = s.getEndTime();
+      }
+      spans.add(s);
+    }
+
+    return Trace.newBuilder()
+        .setLandscapeToken(landscapeToken)
+        .setTraceId(traceId)
+        .setStartTime(start)
+        .setEndTime(end)
+        .setDuration(TimestampHelper.durationMs(start, end))
+        .setSpanList(spans)
+        .setTraceCount(1)
+        .setOverallRequestCount(1)
+        .build();
+  }
+
+  public static Trace randomTrace(final int spanAmount, final String landscapeToken,
+      final long fromSeconds, final long toSeconds) {
+
+    final String traceId = RandomStringUtils.random(6, true, true);
+
+    Timestamp start = null;
+    Timestamp end = null;
+    final List<SpanDynamic> spans = new ArrayList<>();
+    for (int i = 0; i < spanAmount; i++) {
+      final SpanDynamic s =
+          randomSpanFixedTimeInterval(traceId, landscapeToken, fromSeconds, toSeconds);
       if (start == null || TimestampHelper.isBefore(s.getStartTime(), start)) {
         start = s.getStartTime();
       }

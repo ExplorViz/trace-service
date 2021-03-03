@@ -21,14 +21,8 @@ public class TraceResourceIt {
 
   // private static final Logger LOGGER = Logger.getLogger(TraceResourceIt.class);
 
-  // Tests
-  // - insert and retrieve single trace with 5 spans
-  // - insert and retrieve 5 traces with 5 spans each
-  // - filter by timestamp
-  // - get by trace id
-
   @Inject
-  private TraceRepository repository;
+  TraceRepository repository;
 
   @Test
   public void shouldSaveAndRetrieveEntityById() throws InterruptedException {
@@ -131,6 +125,62 @@ public class TraceResourceIt {
     Assertions.assertTrue(actualTraceList.contains(expected3));
     Assertions.assertTrue(actualTraceList.contains(expected4));
     Assertions.assertTrue(actualTraceList.contains(expected5));
+  }
+
+  @Test
+  public void shouldSaveAndRetrieveEntitiesByTimestamp() throws InterruptedException {
+
+    final String landscapeToken = RandomStringUtils.random(32, true, true);
+
+    final long fromSeconds1 = 1605700800L;
+    final long toSeconds1 = 1605700810L;
+
+    final long fromSeconds2 = 1605700811L;
+    final long toSeconds2 = 1605700821L;
+
+    final Trace expected1 =
+        TraceConverter.convertTraceToDao(
+            TraceHelper.randomTrace(5, landscapeToken, fromSeconds1, toSeconds1));
+    final Trace expected2 =
+        TraceConverter.convertTraceToDao(
+            TraceHelper.randomTrace(5, landscapeToken, fromSeconds1, toSeconds1));
+    final Trace expected3 =
+        TraceConverter.convertTraceToDao(
+            TraceHelper.randomTrace(5, landscapeToken, fromSeconds1, toSeconds1));
+    final Trace expected4 =
+        TraceConverter.convertTraceToDao(
+            TraceHelper.randomTrace(5, landscapeToken, fromSeconds2, toSeconds2));
+    final Trace expected5 =
+        TraceConverter.convertTraceToDao(
+            TraceHelper.randomTrace(5, landscapeToken, fromSeconds2, toSeconds2));
+
+    long filteringKey =
+        expected1.getStartTime() <= expected2.getStartTime() ? expected1.getStartTime()
+            : expected2.getStartTime();
+
+    filteringKey =
+        filteringKey <= expected3.getStartTime() ? filteringKey : expected3.getStartTime();
+
+    final List<Trace> expectedList = new ArrayList<>();
+    expectedList.add(expected1);
+    expectedList.add(expected2);
+    expectedList.add(expected3);
+
+    this.repository.insert(expected1).await().indefinitely();
+    this.repository.insert(expected2).await().indefinitely();
+    this.repository.insert(expected3).await().indefinitely();
+    this.repository.insert(expected4).await().indefinitely();
+    this.repository.insert(expected5).await().indefinitely();
+
+    final List<Trace> actualTraceList =
+        this.repository.getByStartTimeAndEndTime(landscapeToken, filteringKey, filteringKey + 1000)
+            .collectItems().asList().await().indefinitely();
+
+    Assertions.assertTrue(expectedList.size() == actualTraceList.size());
+
+    Assertions.assertTrue(actualTraceList.contains(expected1));
+    Assertions.assertTrue(actualTraceList.contains(expected2));
+    Assertions.assertTrue(actualTraceList.contains(expected3));
   }
 
 }

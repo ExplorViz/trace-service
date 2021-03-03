@@ -28,7 +28,7 @@ public class TraceResourceApi {
   // - get by trace id
 
   @Inject
-  private TraceRepository repository;
+  TraceRepository repository;
 
   @Test
   public void shouldSaveAndRetrieveEntity() throws InterruptedException {
