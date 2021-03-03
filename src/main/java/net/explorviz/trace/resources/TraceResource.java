@@ -11,7 +11,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import net.explorviz.trace.persistence.dao.Trace;
 import net.explorviz.trace.service.TraceRepository;
-import org.jboss.logging.Logger;
 
 /**
  * HTTP resource for accessing traces.
@@ -20,7 +19,6 @@ import org.jboss.logging.Logger;
 public class TraceResource {
 
   private static final long MIN_SECONDS = 1_577_836_800; // 01.01.2020 00:00
-  private static final Logger LOGGER = Logger.getLogger(TraceResource.class);
 
   private final TraceRepository repository;
 
@@ -62,8 +60,6 @@ public class TraceResource {
       default:
         break;
     }
-
-    LOGGER.info("resource token " + landscapeToken + " and " + from + " and " + to);
 
     return this.repository.getByStartTimeAndEndTime(landscapeToken, from, to);
   }
