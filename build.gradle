@@ -87,9 +87,9 @@ dependencies {
   testImplementation 'io.quarkus:quarkus-junit5'
   
   // these should be moved to integrationTestImplementation when Class loading bug is fixed for QuarkusTest
-  testImplementation 'io.rest-assured:rest-assured'
-  testImplementation 'com.datastax.oss.quarkus:cassandra-quarkus-test-framework'
-  testImplementation "org.testcontainers:kafka:1.15.2"
+  integrationTestImplementation 'io.rest-assured:rest-assured'
+  integrationTestImplementation 'com.datastax.oss.quarkus:cassandra-quarkus-test-framework'
+  integrationTestImplementation "org.testcontainers:kafka:1.15.2"
 
   // Integration Testing  
   integrationTestImplementation 'io.quarkus:quarkus-junit5'  
