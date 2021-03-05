@@ -13,9 +13,8 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import net.explorviz.avro.SpanDynamic;
 import net.explorviz.avro.Trace;
-import net.explorviz.trace.persistence.PersistingException;
-import net.explorviz.trace.persistence.SpanRepository;
 import net.explorviz.trace.service.TraceAggregator;
+import net.explorviz.trace.service.TraceRepository;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -56,12 +55,11 @@ public class SpanPersistingStream {
 
   private KafkaStreams streams;
 
-  private final SpanRepository repository;
+  private final TraceRepository traceRepository;
 
   @Inject
   public SpanPersistingStream(final SchemaRegistryClient schemaRegistryClient,
-      final KafkaConfig config,
-      final SpanRepository repository) {
+      final KafkaConfig config, final TraceRepository traceRepository) {
 
     this.registryClient = schemaRegistryClient;
     this.config = config;
@@ -69,8 +67,7 @@ public class SpanPersistingStream {
     this.topology = this.buildTopology();
     this.setupStreamsConfig();
 
-    this.repository = repository;
-
+    this.traceRepository = traceRepository;
   }
 
   /* default */ void onStart(@Observes final StartupEvent event) { // NOPMD
@@ -94,6 +91,8 @@ public class SpanPersistingStream {
   }
 
   private Topology buildTopology() {
+
+    // TODO Reduction of multiple traces to a single representative?
 
     final StreamsBuilder builder = new StreamsBuilder();
 
@@ -119,17 +118,12 @@ public class SpanPersistingStream {
         traceTable.toStream().selectKey((k, v) -> v.getLandscapeToken() + "::" + k);
 
     traceStream.foreach((k, t) -> {
-      try {
-        if (LOGGER.isDebugEnabled()) {
-          LOGGER.debug("Received trace record: {}", t.toString());
-        }
-        this.repository.saveTraceAsync(t);
-      } catch (final PersistingException e) {
-        // TODO: How to handle these spans? Enqueue somewhere for retries?
-        if (LOGGER.isErrorEnabled()) {
-          LOGGER.error("A span was not persisted: {0}", e);
-        }
+
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("Received trace record: {}", t.toString());
       }
+
+      this.traceRepository.insert(t).await().indefinitely();
     });
 
     return builder.build();

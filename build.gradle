@@ -1,8 +1,9 @@
 plugins {
   id 'java'
   id 'io.quarkus'
-  id 'com.adarshr.test-logger' version '2.1.0'
+  id 'com.adarshr.test-logger' version '2.1.1'
   id "com.commercehub.gradle.plugin.avro" version "0.21.0"
+  id 'eclipse'
 }
 
 apply from: 'buildscripts/code-analysis.gradle'
@@ -15,6 +16,40 @@ repositories {
   }
 }
 
+sourceSets {
+  integrationTest {
+    java.srcDir file('src/integrationTest/java')
+    compileClasspath += sourceSets.main.output
+    runtimeClasspath += sourceSets.main.output
+  }
+}
+
+eclipse {
+  classpath {
+    plusConfigurations.add configurations.integrationTestRuntimeOnly
+    plusConfigurations.add configurations.integrationTestImplementation
+  }
+}
+
+task integrationTest(type: Test) {
+  description = 'Runs integration tests.'
+  group = 'verification'
+
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+  classpath = sourceSets.integrationTest.runtimeClasspath
+  shouldRunAfter test
+}
+
+check.dependsOn integrationTest
+
+configurations {
+  integrationTestImplementation.extendsFrom implementation
+  integrationTestRuntimeOnly.extendsFrom runtimeOnly
+
+  integrationTestImplementation.setCanBeResolved(true)
+  integrationTestRuntimeOnly.setCanBeResolved(true)
+}
+
 /**
  * Version conflict for Kafka clients library:
  *      kafka-avro-serializer transitively depends on version 5.3.0-scc
@@ -23,31 +58,49 @@ repositories {
  * seems to be compatible with this version.
  */
 
-dependencies {
+dependencies {  
+  
   implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+  
+  implementation group: 'io.quarkus', name: 'quarkus-bom', version: '1.11.0.Final', ext: 'pom'
+  
+  // Cassandra
+  implementation group: 'com.datastax.oss.quarkus', name: 'cassandra-quarkus-bom', version: '1.0.0', ext: 'pom'  
+  annotationProcessor group: 'com.datastax.oss', name: 'java-driver-mapper-processor', version: '4.10.0'
+  implementation 'com.datastax.oss:java-driver-mapper-runtime'
+  implementation 'com.datastax.oss.quarkus:cassandra-quarkus-client'
+  implementation 'com.datastax.oss:java-driver-core'
+  implementation 'com.datastax.oss:java-driver-query-builder'
 
+  // Kafka
   implementation 'io.quarkus:quarkus-kafka-streams'
   implementation 'io.quarkus:quarkus-resteasy'
   implementation 'io.quarkus:quarkus-resteasy-jackson'
-
-  implementation 'io.opencensus:opencensus-proto:0.2.0'
-
-  implementation group: 'io.quarkus', name: 'quarkus-smallrye-reactive-messaging-kafka'
-
   implementation group: 'io.confluent', name: 'kafka-avro-serializer', version: '5.5.0'
   implementation group: 'io.confluent', name: 'kafka-streams-avro-serde', version: '5.5.0'
+  implementation 'io.quarkus:quarkus-smallrye-reactive-messaging-kafka' 
 
-  implementation group: 'com.datastax.oss', name: 'java-driver-core', version: '4.8.0'
-  implementation group: 'com.datastax.oss', name: 'java-driver-query-builder', version: '4.8.0'
-
-
-  testImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'
+  // Reactive Programming   
+  implementation 'io.quarkus:quarkus-resteasy-mutiny'
+  
+  // Unit Testing  
   testImplementation 'io.quarkus:quarkus-junit5'
 
-  testImplementation group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
-  testImplementation group: 'org.cassandraunit', name: 'cassandra-unit', version: '4.3.1.0'
+  // Why do these have to also be declared as testImplementation Dependency?
+  testImplementation 'io.rest-assured:rest-assured'
+  testImplementation 'com.datastax.oss.quarkus:cassandra-quarkus-test-framework'
+  testImplementation "org.testcontainers:kafka:1.15.2"
+  
+  // Integration / Api Tests
+  integrationTestImplementation 'io.rest-assured:rest-assured'
+  integrationTestImplementation 'com.datastax.oss.quarkus:cassandra-quarkus-test-framework'
+  integrationTestImplementation "org.testcontainers:kafka:1.15.2"
 
-
+  // Integration Testing  
+  integrationTestImplementation 'io.quarkus:quarkus-junit5'  
+  integrationTestImplementation 'org.mockito:mockito-junit-jupiter'
+  
+  integrationTestImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.4.1'  
 }
 
 group 'net.explorviz'
@@ -67,8 +120,12 @@ java {
   targetCompatibility = JavaVersion.VERSION_11
 }
 
-sourceSets.main.java.srcDirs = ['build/generated-main-avro-java', 'src/main/java']
+sourceSets.main.java.srcDirs = ['build/generated-main-avro-java', 'src/main/java', 'build/generated/sources/annotationProcessor/java/main']
 
 test {
+  systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+}
+
+integrationTest {
   systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
 }

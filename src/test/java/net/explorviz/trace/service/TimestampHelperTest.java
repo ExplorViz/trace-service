@@ -30,8 +30,6 @@ class TimestampHelperTest {
     // Not reflexive, i.e., strict order
     assertFalse(TimestampHelper.isAfter(minus5, minus5));
     assertFalse(TimestampHelper.isBefore(minus5, minus5));
-
-
   }
 
 
