@@ -27,11 +27,11 @@ unit-test:
     - exec-docker
   script: ./gradlew test --continue
 
-integration-test:
-  stage: test
-  tags:
-    - exec-docker
-  script: ./gradlew integrationTest --continue
+#integration-test:
+#  stage: test
+#  tags:
+#    - exec-docker
+#  script: ./gradlew integrationTest --continue
 
 pmd:
   stage: code-analysis
