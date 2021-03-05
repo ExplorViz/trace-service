@@ -83,10 +83,15 @@ dependencies {
   // Reactive Programming   
   implementation 'io.quarkus:quarkus-resteasy-mutiny'
   
-  // Unit Testing
+  // Unit Testing  
   testImplementation 'io.quarkus:quarkus-junit5'
+
+  // Why do these have to also be declared as testImplementation Dependency?
+  testImplementation 'io.rest-assured:rest-assured'
+  testImplementation 'com.datastax.oss.quarkus:cassandra-quarkus-test-framework'
+  testImplementation "org.testcontainers:kafka:1.15.2"
   
-  // these should be moved to integrationTestImplementation when Class loading bug is fixed for QuarkusTest
+  // Integration / Api Tests
   integrationTestImplementation 'io.rest-assured:rest-assured'
   integrationTestImplementation 'com.datastax.oss.quarkus:cassandra-quarkus-test-framework'
   integrationTestImplementation "org.testcontainers:kafka:1.15.2"

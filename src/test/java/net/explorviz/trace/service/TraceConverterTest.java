@@ -3,7 +3,6 @@ package net.explorviz.trace.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.ArrayList;
 import java.util.List;
-import net.explorviz.trace.persistence.cassandra.TraceHelper;
 import net.explorviz.trace.persistence.dao.SpanDynamic;
 import net.explorviz.trace.persistence.dao.Trace;
 import org.junit.jupiter.api.Test;
