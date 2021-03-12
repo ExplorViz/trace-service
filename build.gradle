@@ -62,6 +62,8 @@ dependencies {
   
   implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
   
+  implementation 'io.quarkus:quarkus-container-image-jib'
+  
   implementation group: 'io.quarkus', name: 'quarkus-bom', version: '1.11.0.Final', ext: 'pom'
   
   // Cassandra
