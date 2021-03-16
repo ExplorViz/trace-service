@@ -3,6 +3,7 @@ package net.explorviz.trace.kafka;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
+import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import java.time.Duration;
@@ -19,6 +20,8 @@ import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KafkaStreams.State;
+import org.apache.kafka.streams.KafkaStreams.StateListener;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
@@ -73,6 +76,8 @@ public class SpanPersistingStream {
   /* default */ void onStart(@Observes final StartupEvent event) { // NOPMD
     this.streams = new KafkaStreams(this.topology, this.streamsConfig);
     this.streams.cleanUp();
+    this.streams.setStateListener(new ErrorStateListener());
+
     this.streams.start();
   }
 
@@ -142,6 +147,23 @@ public class SpanPersistingStream {
         this.config.getSchemaRegistryUrl()), forKey);
 
     return serde;
+  }
+
+  private static class ErrorStateListener implements StateListener {
+
+    @Override
+    public void onChange(final State newState, final State oldState) {
+      if (newState.equals(State.ERROR)) {
+
+        if (LOGGER.isErrorEnabled()) {
+          LOGGER.error(
+              "Kafka Streams thread died. "
+                  + "Are Kafka topic initialized? Quarkus application will shut down.");
+        }
+        Quarkus.asyncExit(-1);
+      }
+
+    }
   }
 
 
