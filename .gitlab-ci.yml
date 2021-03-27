@@ -39,12 +39,22 @@ pmd:
   tags:
     - exec-docker
   script: ./gradlew pmdMain
+  artifacts:
+    paths:
+     - build/reports/pmd/main.html
+    expire_in: 5 days
+    when: on_failure
 
 checkstyle:
   stage: code-analysis
   tags:
     - exec-docker
   script: ./gradlew checkstyleMain
+  artifacts:
+    paths:
+     - build/reports/checkstyle/main.html
+    expire_in: 5 days
+    when: on_failure
 
 push-dockerhub:
   stage: deploy
