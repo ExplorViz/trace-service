@@ -4,6 +4,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import net.explorviz.avro.EventType;
 import net.explorviz.avro.TokenEvent;
+import net.explorviz.trace.persistence.TraceReactiveService;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,9 +20,13 @@ public class TokenEventConsumer {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(TokenEventConsumer.class);
 
+  private final TraceReactiveService service;
 
   @Inject
-  public TokenEventConsumer() {}
+  public TokenEventConsumer(TraceReactiveService traceReactiveService) {
+    this.service = traceReactiveService;
+  }
+
 
   /**
    * Processes token-events in a background, called by reactive messaging framework. If a token was
@@ -36,6 +41,11 @@ public class TokenEventConsumer {
     if (event.getType() == EventType.DELETED) {
       // this.service.deleteAll(event.getToken());
       LOGGER.info("Deleting traces for token {}", event.getToken());
+    } else if (event.getType() == EventType.CLONED) {
+      this.service.cloneAllAsync(event.getToken(), event.getClonedToken()).subscribe().with(
+        item -> LOGGER.info("Duplicated " + item.getLandscapeToken()),
+        failure -> LOGGER.error("Failed to duplicate", failure),
+        () -> LOGGER.info("Duplication complete"));
     }
   }
 
