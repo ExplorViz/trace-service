@@ -1,5 +1,6 @@
 package net.explorviz.trace.events;
 
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import net.explorviz.avro.EventType;
@@ -23,10 +24,10 @@ public class TokenEventConsumer {
   private final TraceRepository service;
 
   @Inject
-  public TokenEventConsumer(TraceRepository traceReactiveService) {
+  public TokenEventConsumer(final TraceRepository traceReactiveService) {
     this.service = traceReactiveService;
   }
-
+  
 
   /**
    * Processes token-events in a background, called by reactive messaging framework. If a token was
@@ -42,10 +43,13 @@ public class TokenEventConsumer {
       // this.service.deleteAll(event.getToken());
       LOGGER.info("Deleting traces for token {}", event.getToken());
     } else if (event.getType() == EventType.CLONED) {
-      this.service.cloneAllAsync(event.getToken(), event.getClonedToken()).subscribe().with(
-        item -> LOGGER.debug("Duplicated " + item.getLandscapeToken()),
-        failure -> LOGGER.error("Failed to duplicate", failure),
-        () -> LOGGER.info("Duplication complete"));
+      LOGGER.info("Cloning traces for token {}", event.getToken());
+      this.service.cloneAllAsync(event.getToken(), event.getClonedToken())
+          .runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
+          .subscribe().with(
+            item -> LOGGER.debug("Cloned trace for {}", item.getLandscapeToken()),
+            failure -> LOGGER.error("Failed to duplicate", failure),
+            () -> LOGGER.info("Cloned all traces for {}", event.getToken()));
     }
   }
 

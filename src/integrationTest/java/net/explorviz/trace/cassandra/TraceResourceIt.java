@@ -194,9 +194,6 @@ public class TraceResourceIt {
     final long fromSeconds1 = 1605700800L;
     final long toSeconds1 = 1605700810L;
 
-    final long fromSeconds2 = 1605700811L;
-    final long toSeconds2 = 1605700821L;
-
     final Trace expected1 =
         TraceConverter.convertTraceToDao(
             TraceHelper.randomTrace(5, landscapeToken, fromSeconds1, toSeconds1));
