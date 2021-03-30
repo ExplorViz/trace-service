@@ -13,6 +13,8 @@ import net.explorviz.trace.service.TraceRepository;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @QuarkusTest
 @QuarkusTestResource(KafkaTestResource.class)
@@ -20,7 +22,7 @@ import org.junit.jupiter.api.Test;
 @TestProfile(CassandraTestProfile.class)
 public class TraceResourceIt {
 
-  // private static final Logger LOGGER = Logger.getLogger(TraceResourceIt.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(TraceResourceIt.class);
 
   @Inject
   TraceRepository repository;
@@ -183,5 +185,50 @@ public class TraceResourceIt {
     Assertions.assertTrue(actualTraceList.contains(expected2));
     Assertions.assertTrue(actualTraceList.contains(expected3));
   }
+
+  @Test
+  public void cloneToken() throws InterruptedException {
+
+    final String landscapeToken = RandomStringUtils.random(32, true, true);
+
+    final long fromSeconds1 = 1605700800L;
+    final long toSeconds1 = 1605700810L;
+
+    final long fromSeconds2 = 1605700811L;
+    final long toSeconds2 = 1605700821L;
+
+    final Trace expected1 =
+        TraceConverter.convertTraceToDao(
+            TraceHelper.randomTrace(5, landscapeToken, fromSeconds1, toSeconds1));
+    final Trace expected2 =
+        TraceConverter.convertTraceToDao(
+            TraceHelper.randomTrace(5, landscapeToken, fromSeconds1, toSeconds1));
+    final Trace expected3 =
+        TraceConverter.convertTraceToDao(
+            TraceHelper.randomTrace(5, landscapeToken, fromSeconds1, toSeconds1));
+
+    final List<Trace> expectedList = new ArrayList<>();
+    expectedList.add(expected1);
+    expectedList.add(expected2);
+    expectedList.add(expected3);
+
+    this.repository.insert(expected1).await().indefinitely();
+    this.repository.insert(expected2).await().indefinitely();
+    this.repository.insert(expected3).await().indefinitely();
+
+    final String newLandscapeToken = RandomStringUtils.random(32, true, true);
+    var newToken = this.repository.getAllAsync(newLandscapeToken).collectItems().asList().await().indefinitely();
+    var clonedToken = this.repository.getAllAsync(landscapeToken).collectItems().asList().await().indefinitely();
+
+    Assertions.assertEquals(0, newToken.size());
+    Assertions.assertEquals(3, clonedToken.size());
+
+    this.repository.cloneAllAsync(newLandscapeToken, landscapeToken).collectItems().asList().await().indefinitely();
+
+    var result = this.repository.getAllAsync(newLandscapeToken).collectItems().asList().await().indefinitely();
+
+    Assertions.assertEquals(3, result.size());
+  }
+
 
 }

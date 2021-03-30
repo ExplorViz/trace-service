@@ -41,4 +41,8 @@ public class TraceRepository {
     return this.traceReactiveService.getByTraceId(landscapeToken, traceId);
   }
 
+  public Multi<Trace> cloneAllAsync(final String landscapeToken, final String clonedLandscapeToken) {
+    return this.traceReactiveService.getAllAsync(clonedLandscapeToken).invoke(x -> x.setLandscapeToken(landscapeToken)).invoke(this::insert);
+  }
+
 }

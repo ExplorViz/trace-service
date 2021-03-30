@@ -15,7 +15,7 @@ public interface TraceDaoReactive {
   @Insert
   Uni<Void> insertAsync(Trace trace);
 
-  @Select
+  @Select(customWhereClause = "landscape_token = :id")
   MutinyMappedReactiveResultSet<Trace> getAllAsync(String id);
 
   @Select(
