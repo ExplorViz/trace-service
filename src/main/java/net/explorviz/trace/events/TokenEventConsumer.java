@@ -34,7 +34,7 @@ public class TokenEventConsumer {
   public void process(final TokenEvent event) {
     LOGGER.info("Received event {}", event);
     if (event.getType() == EventType.DELETED) {
-      // this.service.deleteAll(event.getToken());
+      //this.service.deleteAll(event.getToken());
       LOGGER.info("Deleting traces for token {}", event.getToken());
     }
   }
