@@ -87,6 +87,7 @@ dependencies {
   
   // Unit Testing  
   testImplementation 'io.quarkus:quarkus-junit5'
+  testImplementation 'io.quarkus:quarkus-junit5-mockito'
 
   // Why do these have to also be declared as testImplementation Dependency?
   testImplementation 'io.rest-assured:rest-assured'
