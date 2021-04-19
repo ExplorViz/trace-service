@@ -80,6 +80,7 @@ dependencies {
   implementation 'io.quarkus:quarkus-resteasy-jackson'
   implementation group: 'io.confluent', name: 'kafka-avro-serializer', version: '5.5.0'
   implementation group: 'io.confluent', name: 'kafka-streams-avro-serde', version: '5.5.0'
+  implementation 'io.quarkus:quarkus-avro'
   implementation 'io.quarkus:quarkus-smallrye-reactive-messaging-kafka' 
 
   // Reactive Programming   
