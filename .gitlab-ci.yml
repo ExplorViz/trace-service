@@ -59,7 +59,7 @@ checkstyle:
 push-dockerhub-native:
   stage: deploy
   only:
-    - scheduled
+    - schedules
   tags:
     - exec-docker
   script: 
@@ -70,6 +70,8 @@ push-dockerhub:
   stage: deploy
   only:
     - master
+  except:
+    - schedules
   tags:
     - exec-docker
   script: 
