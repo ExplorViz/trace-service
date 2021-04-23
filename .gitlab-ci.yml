@@ -1,4 +1,4 @@
-image: openjdk:11-jdk
+image: ghcr.io/graalvm/graalvm-ce:latest
 
 # Disable the Gradle daemon for Continuous Integration servers as correctness
 # is usually a priority over speed in CI environments. Using a fresh
@@ -9,6 +9,7 @@ variables:
 
 before_script:
   - export GRADLE_USER_HOME=`pwd`/.gradle
+  - gu install native-image
 
 stages:
   - code-analysis
@@ -63,8 +64,8 @@ push-dockerhub-native:
   tags:
     - exec-docker
   script: 
-    - ./gradlew clean assemble -Dquarkus.package.type=native -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true -Dquarkus.container-image.image=explorviz/trace-service-native -Dquarkus.container-image.push=true -Dquarkus.container-image.username=$EXPLORVIZ_DOCKERHUB_USERNAME -Dquarkus.container-image.password=$EXPLORVIZ_DOCKERHUB_PASSWORD
-    - ./gradlew clean assemble -Dquarkus.package.type=native -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true -Dquarkus.container-image.image=explorviz/trace-service-native:$CI_COMMIT_SHORT_SHA -Dquarkus.container-image.push=true -Dquarkus.container-image.username=$EXPLORVIZ_DOCKERHUB_USERNAME -Dquarkus.container-image.password=$EXPLORVIZ_DOCKERHUB_PASSWORD
+    - ./gradlew clean assemble -Dquarkus.package.type=native -Dquarkus.container-image.build=true -Dquarkus.container-image.image=explorviz/trace-service-native -Dquarkus.container-image.push=true -Dquarkus.container-image.username=$EXPLORVIZ_DOCKERHUB_USERNAME -Dquarkus.container-image.password=$EXPLORVIZ_DOCKERHUB_PASSWORD
+    - ./gradlew clean assemble -Dquarkus.package.type=native -Dquarkus.container-image.build=true -Dquarkus.container-image.image=explorviz/trace-service-native:$CI_COMMIT_SHORT_SHA -Dquarkus.container-image.push=true -Dquarkus.container-image.username=$EXPLORVIZ_DOCKERHUB_USERNAME -Dquarkus.container-image.password=$EXPLORVIZ_DOCKERHUB_PASSWORD
 
 push-dockerhub:
   stage: deploy
