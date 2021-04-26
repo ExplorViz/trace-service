@@ -31,6 +31,11 @@
     {
       "name": "hashCode",
       "type": "string"
+    },
+    {
+      "name": "isConstructor",
+      "type": "boolean",
+      "default": false
     }
   ]
 }

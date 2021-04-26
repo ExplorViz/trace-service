@@ -36,5 +36,4 @@ public class TraceReactiveService {
   public Multi<Trace> getByTraceId(final String landscapeToken, final String traceId) {
     return this.traceDaoReactive.getByTraceId(landscapeToken, traceId);
   }
-
 }
