@@ -182,7 +182,9 @@ class SpanPersistingStreamTest {
     Mockito.doAnswer(i -> {
       final Trace inserted = i.getArgument(0, Trace.class);
       final String key = inserted.getLandscapeToken() + "::" + inserted.getTraceId();
-      LOGGER.info("test span size " + inserted.getSpanList().size());
+      if (LOGGER.isInfoEnabled()) {
+        LOGGER.info("test span size " + inserted.getSpanList().size());
+      }
       // mockSpanDB.computeIfPresent(key, (k, v) -> {
       // v.getSpanList().addAll(inserted.getSpanList());
       // return v;
