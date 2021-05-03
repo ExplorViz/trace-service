@@ -124,8 +124,8 @@ public class SpanPersistingStream {
 
     traceStream.foreach((k, t) -> {
 
-      if (LOGGER.isDebugEnabled()) {
-        LOGGER.debug("Received trace record: {}", t.toString());
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("Received trace record: {}", t.toString());
       }
 
       this.traceRepository.insert(t).await().indefinitely();
