@@ -9,7 +9,6 @@ variables:
 
 before_script:
   - export GRADLE_USER_HOME=`pwd`/.gradle
-  - gu install native-image
 
 stages:
   - code-analysis
@@ -61,6 +60,8 @@ push-dockerhub-native:
   stage: deploy
   only:
     - schedules
+  before_script:
+    - gu install native-image
   tags:
     - exec-docker
   script: 
