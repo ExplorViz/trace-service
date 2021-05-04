@@ -27,7 +27,7 @@ public class TokenEventConsumer {
   public TokenEventConsumer(final TraceRepository traceReactiveService) {
     this.service = traceReactiveService;
   }
-  
+
 
   /**
    * Processes token-events in a background, called by reactive messaging framework. If a token was
@@ -38,18 +38,24 @@ public class TokenEventConsumer {
 
   @Incoming("token-events")
   public void process(final TokenEvent event) {
-    LOGGER.info("Received event {}", event);
+    if (LOGGER.isTraceEnabled()) {
+      LOGGER.trace("Received event {}", event);
+    }
     if (event.getType() == EventType.DELETED) {
       // this.service.deleteAll(event.getToken());
-      LOGGER.info("Deleting traces for token {}", event.getToken());
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("Deleting traces for token {}", event.getToken());
+      }
     } else if (event.getType() == EventType.CLONED) {
-      LOGGER.info("Cloning traces for token {}", event.getToken());
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("Cloning traces for token {}", event.getToken());
+      }
       this.service.cloneAllAsync(event.getToken(), event.getClonedToken())
           .runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
           .subscribe().with(
-            item -> LOGGER.debug("Cloned trace for {}", item.getLandscapeToken()),
-            failure -> LOGGER.error("Failed to duplicate", failure),
-            () -> LOGGER.info("Cloned all traces for {}", event.getToken()));
+              item -> LOGGER.trace("Cloned trace for {}", item.getLandscapeToken()),
+              failure -> LOGGER.error("Failed to duplicate", failure),
+              () -> LOGGER.trace("Cloned all traces for {}", event.getToken()));
     }
   }
 
