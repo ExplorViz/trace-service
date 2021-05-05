@@ -11,6 +11,9 @@ import org.apache.kafka.streams.processor.TimestampExtractor;
  */
 public class SpanTimestampKafkaExtractor implements TimestampExtractor {
 
+  public SpanTimestampKafkaExtractor() { // NOPMD
+    // nothing to do, necessary for native image
+  }
 
   @Override
   public long extract(final ConsumerRecord<Object, Object> record, final long previousTimestamp) {
