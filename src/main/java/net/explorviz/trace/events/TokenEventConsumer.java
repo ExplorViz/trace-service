@@ -35,7 +35,6 @@ public class TokenEventConsumer {
    *
    * @param event the token-event
    */
-
   @Incoming("token-events")
   public void process(final TokenEvent event) {
     if (LOGGER.isTraceEnabled()) {
@@ -50,7 +49,7 @@ public class TokenEventConsumer {
       if (LOGGER.isTraceEnabled()) {
         LOGGER.trace("Cloning traces for token {}", event.getToken());
       }
-      this.service.cloneAllAsync(event.getToken(), event.getClonedToken())
+      this.service.cloneAllAsync(event.getToken().getValue(), event.getClonedToken())
           .runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
           .subscribe().with(
               item -> LOGGER.trace("Cloned trace for {}", item.getLandscapeToken()),
