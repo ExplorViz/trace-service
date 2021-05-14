@@ -1,4 +1,7 @@
-[![Build Status](https://travis-ci.org/ExplorViz/trace-service.svg?branch=master)](https://travis-ci.org/ExplorViz/trace-service)
+[![pipeline status](https://git.se.informatik.uni-kiel.de/ExplorViz/code/trace-service/badges/master/pipeline.svg)](https://git.se.informatik.uni-kiel.de/ExplorViz/code/trace-service/-/commits/master) 
+
+[![coverage report](https://git.se.informatik.uni-kiel.de/ExplorViz/code/trace-service/badges/master/coverage.svg)](https://git.se.informatik.uni-kiel.de/ExplorViz/code/trace-service/-/commits/master)
+
 
 # trace-service
 
