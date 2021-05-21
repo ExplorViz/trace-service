@@ -50,6 +50,8 @@ public class SpanPersistingStream {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SpanPersistingStream.class);
 
+  private static final int KAFKA_MAX_RECORD_SIZE = 7_000_000;
+
   private final Properties streamsConfig = new Properties();
   private final Topology topology;
 
@@ -59,6 +61,7 @@ public class SpanPersistingStream {
   private KafkaStreams streams;
 
   private final TraceRepository traceRepository;
+  private boolean logInitData = true;
 
   @Inject
   public SpanPersistingStream(final SchemaRegistryClient schemaRegistryClient,
@@ -93,6 +96,12 @@ public class SpanPersistingStream {
     this.streamsConfig.put(StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG,
         this.config.getTimestampExtractor());
     this.streamsConfig.put(StreamsConfig.APPLICATION_ID_CONFIG, this.config.getApplicationId());
+
+    // enable producing of bigger records
+    this.streamsConfig.put("max.request.size", KAFKA_MAX_RECORD_SIZE);
+
+    // enable consuming of bigger records
+    this.streamsConfig.put("max.partition.fetch.bytes", KAFKA_MAX_RECORD_SIZE);
   }
 
   private Topology buildTopology() {
@@ -123,6 +132,11 @@ public class SpanPersistingStream {
         traceTable.toStream().selectKey((k, v) -> v.getLandscapeToken() + "::" + k);
 
     traceStream.foreach((k, t) -> {
+
+      if (this.logInitData && LOGGER.isDebugEnabled()) {
+        this.logInitData = false;
+        LOGGER.debug("Received data via Kafka.");
+      }
 
       if (LOGGER.isTraceEnabled()) {
         LOGGER.trace("Received trace record: {}", t.toString());
