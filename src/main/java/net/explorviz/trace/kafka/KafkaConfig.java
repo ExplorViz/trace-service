@@ -24,12 +24,14 @@ public class KafkaConfig {
   @ConfigProperty(name = "explorviz.kafka-streams.topics.in")
   /* default */ String inTopic;
 
-
   @ConfigProperty(name = "explorviz.schema-registry.url")
   /* default */ String schemaRegistryUrl;
 
   @ConfigProperty(name = "explorviz.commit-interval-ms")
   /* default */ int commitIntervalMs;
+
+  @ConfigProperty(name = "explorviz.kafka-streams.max-record-size")
+  /* default */ int maxRecordSize;
 
   // CHECKSTYLE:ON
 

@@ -50,8 +50,6 @@ public class SpanPersistingStream {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SpanPersistingStream.class);
 
-  private static final int KAFKA_MAX_RECORD_SIZE = 7_000_000;
-
   private final Properties streamsConfig = new Properties();
   private final Topology topology;
 
@@ -98,10 +96,10 @@ public class SpanPersistingStream {
     this.streamsConfig.put(StreamsConfig.APPLICATION_ID_CONFIG, this.config.getApplicationId());
 
     // enable producing of bigger records
-    this.streamsConfig.put("max.request.size", KAFKA_MAX_RECORD_SIZE);
+    this.streamsConfig.put("max.request.size", this.config.maxRecordSize);
 
     // enable consuming of bigger records
-    this.streamsConfig.put("max.partition.fetch.bytes", KAFKA_MAX_RECORD_SIZE);
+    this.streamsConfig.put("max.partition.fetch.bytes", this.config.maxRecordSize);
   }
 
   private Topology buildTopology() {
