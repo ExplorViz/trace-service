@@ -96,10 +96,10 @@ public class SpanPersistingStream {
     this.streamsConfig.put(StreamsConfig.APPLICATION_ID_CONFIG, this.config.getApplicationId());
 
     // enable producing of bigger records
-    this.streamsConfig.put("max.request.size", this.config.maxRecordSize);
+    this.streamsConfig.put("max.request.size", this.config.getMaxRecordSize());
 
     // enable consuming of bigger records
-    this.streamsConfig.put("max.partition.fetch.bytes", this.config.maxRecordSize);
+    this.streamsConfig.put("max.partition.fetch.bytes", this.config.getMaxRecordSize());
   }
 
   private Topology buildTopology() {

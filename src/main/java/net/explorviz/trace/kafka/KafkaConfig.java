@@ -59,4 +59,8 @@ public class KafkaConfig {
     return this.schemaRegistryUrl;
   }
 
+  public int getMaxRecordSize() {
+    return this.maxRecordSize;
+  }
+
 }
