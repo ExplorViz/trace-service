@@ -30,6 +30,7 @@ import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Suppressed;
 import org.apache.kafka.streams.kstream.TimeWindows;
 import org.apache.kafka.streams.kstream.Windowed;
@@ -143,6 +144,7 @@ public class SpanPersistingStream {
       this.traceRepository.insert(t).await().indefinitely();
     });
 
+    traceStream.to(config.getOutTopic(), Produced.with(new Serdes.StringSerde(), getAvroSerde(false)));
     return builder.build();
   }
 

@@ -24,6 +24,9 @@ public class KafkaConfig {
   @ConfigProperty(name = "explorviz.kafka-streams.topics.in")
   /* default */ String inTopic;
 
+  @ConfigProperty(name = "explorviz.kafka-streams.topics.out")
+  /* default */ String outTopic;
+
   @ConfigProperty(name = "explorviz.schema-registry.url")
   /* default */ String schemaRegistryUrl;
 
@@ -37,6 +40,10 @@ public class KafkaConfig {
 
   public int getCommitIntervalMs() {
     return this.commitIntervalMs;
+  }
+
+  public String getOutTopic() {
+    return outTopic;
   }
 
   public Class<SpanTimestampKafkaExtractor> getTimestampExtractor() {
