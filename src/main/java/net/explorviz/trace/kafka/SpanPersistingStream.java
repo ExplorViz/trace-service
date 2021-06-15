@@ -64,7 +64,7 @@ public class SpanPersistingStream {
 
   @Inject
   public SpanPersistingStream(final SchemaRegistryClient schemaRegistryClient,
-      final KafkaConfig config, final TraceRepository traceRepository) {
+                              final KafkaConfig config, final TraceRepository traceRepository) {
 
     this.registryClient = schemaRegistryClient;
     this.config = config;
@@ -144,7 +144,9 @@ public class SpanPersistingStream {
       this.traceRepository.insert(t).await().indefinitely();
     });
 
-    traceStream.to(config.getOutTopic(), Produced.with(new Serdes.StringSerde(), getAvroSerde(false)));
+    // Forward to trace topic with landscape token as key
+    traceStream.selectKey((k, v) -> v.getLandscapeToken())
+        .to(config.getOutTopic(), Produced.with(new Serdes.StringSerde(), getAvroSerde(false)));
     return builder.build();
   }
 
@@ -152,7 +154,7 @@ public class SpanPersistingStream {
    * Creates a {@link Serde} for specific avro records using the {@link SpecificAvroSerde}.
    *
    * @param forKey {@code true} if the Serde is for keys, {@code false} otherwise
-   * @param <T> type of the avro record
+   * @param <T>    type of the avro record
    * @return a Serde
    */
   private <T extends SpecificRecord> SpecificAvroSerde<T> getAvroSerde(final boolean forKey) {
