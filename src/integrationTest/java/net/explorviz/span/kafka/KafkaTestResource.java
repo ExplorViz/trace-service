@@ -1,4 +1,4 @@
-package net.explorviz.span.kafka;
+package net.explorviz.trace.kafka;
 
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import java.util.Arrays;

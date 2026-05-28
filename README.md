@@ -1,4 +1,4 @@
-# ExplorViz Span-Service
+# ExplorViz trace-service
 
 Scalable service that processes, persists, aggregates and queries the observed traces of method executions within
 monitored software applications.
@@ -42,7 +42,7 @@ command:
 ```
 
 The application, packaged as an _über-jar_, is now runnable using
-`java -jar build/span-service-1.0-SNAPSHOT-runner.jar`.
+`java -jar build/trace-service-1.0-SNAPSHOT-runner.jar`.
 You can add `-Dquarkus.profile=dev` to enable the `%dev` properties.
 
 ## Creating a native executable
@@ -57,7 +57,7 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 ./gradlew build -Dquarkus.package.type=native -Dquarkus.native.container-build=true
 ```
 
-You can then execute your native executable with: `./build/span-service-1.0-SNAPSHOT-runner`
+You can then execute your native executable with: `./build/trace-service-1.0-SNAPSHOT-runner`
 
 If you want to learn more about building native executables, please consult
 https://quarkus.io/guides/gradle-tooling#building-a-native-executable.
