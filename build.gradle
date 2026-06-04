@@ -5,8 +5,8 @@ plugins {
   id 'com.adarshr.test-logger' version '3.2.0'
   id "org.kordamp.gradle.jandex" version "2.0.0"
 
-  id "org.jetbrains.kotlin.jvm" version "2.0.21"
-  id "org.jetbrains.kotlin.plugin.allopen" version "2.0.21"
+  id "org.jetbrains.kotlin.jvm" version "2.3.21"
+  id "org.jetbrains.kotlin.plugin.allopen" version "2.3.21"
 
   id "io.gitlab.arturbosch.detekt" version "1.23.7"
   id "com.diffplug.spotless" version "6.25.0"
@@ -35,12 +35,15 @@ dependencies {
   // Needed for scheduled jobs
   implementation 'io.quarkus:quarkus-scheduler'
 
+  // OpenTelemetry
   implementation "io.opentelemetry.proto:opentelemetry-proto:0.19.0-alpha"
+  implementation "io.opentelemetry.semconv:opentelemetry-semconv:1.41.1"
+  implementation "io.opentelemetry.semconv:opentelemetry-semconv-incubating:1.41.1-alpha"
 
   // Kafka Streams + Confluent Schema Registry + Avro (de)serializer
   implementation 'io.quarkus:quarkus-kafka-streams'
   implementation 'io.quarkus:quarkus-confluent-registry-avro'
-  implementation group: 'io.confluent', name: 'kafka-streams-avro-serde', version: "${confluentAvroSerdeVersion}"
+  implementation "io.confluent:kafka-streams-avro-serde:$confluentAvroSerdeVersion"
   implementation 'io.quarkus:quarkus-messaging-kafka'
 
   //implementation("org.jboss.slf4j:slf4j-jboss-logmanager")
@@ -52,7 +55,7 @@ dependencies {
 
   // Integration / Api Tests
   testImplementation "org.testcontainers:kafka:1.17.5"
-  testImplementation group: "org.apache.kafka", name: "kafka-streams-test-utils", version: "3.3.1"
+  testImplementation "org.apache.kafka:kafka-streams-test-utils:3.3.1"
   integrationTestImplementation "org.testcontainers:kafka:1.17.5"
 
   // Integration Testing
@@ -85,7 +88,7 @@ java {
 sourceSets {
   main {
     java {
-      srcDirs 'build/classes/java/quarkus-generated-sources/grpc'
+      srcDirs 'build/classes/java/quarkus-generated-sources/avdl'
     }
   }
 
@@ -96,7 +99,7 @@ sourceSets {
   }
 }
 
-task integrationTest(type: Test) {
+tasks.register('integrationTest', Test) {
   description = 'Runs integration tests.'
   group = 'verification'
 
@@ -108,9 +111,6 @@ task integrationTest(type: Test) {
 configurations {
   integrationTestImplementation.extendsFrom implementation
   integrationTestRuntimeOnly.extendsFrom runtimeOnly
-
-  integrationTestImplementation.setCanBeResolved(true)
-  integrationTestRuntimeOnly.setCanBeResolved(true)
 }
 
 // Regarding jandex dependency for each task
