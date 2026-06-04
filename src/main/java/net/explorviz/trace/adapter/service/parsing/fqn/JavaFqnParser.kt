@@ -1,4 +1,4 @@
-package net.explorviz.trace.adapter.service.converter.fqn
+package net.explorviz.trace.adapter.service.parsing.fqn
 
 /**
  * Parses Java method fqn as specified by
@@ -15,7 +15,7 @@ class JavaFqnParser : FqnParser {
         const val FILE_EXTENSION = ".java"
     }
 
-    override fun parseFunctionFqn(functionFqn: String): FqnParser.ParsingResult {
+    override fun parseFunctionFqn(functionFqn: String): FqnParser.FqnParseResult {
         // Ignore lambda portion. If we explicitly want to support this, the data model would need to allow functions to
         // have child functions. For now, we simplify and treat this as a call of the containing function.
         val fqnWithoutLambda = functionFqn.substringBefore("$")
@@ -28,6 +28,6 @@ class JavaFqnParser : FqnParser {
         val className = separatedFqn.subList(fileNameIndex, separatedFqn.lastIndex).joinToString(".")
         val methodName = separatedFqn.last()
 
-        return FqnParser.ParsingResult(filePath, methodName, className)
+        return FqnParser.FqnParseResult(filePath, methodName, className)
     }
 }

@@ -1,6 +1,5 @@
 package net.explorviz.trace.adapter.conversion
 
-import com.google.common.io.BaseEncoding
 import com.google.protobuf.ByteString
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
@@ -10,16 +9,17 @@ import io.opentelemetry.proto.common.v1.KeyValue
 import io.opentelemetry.proto.trace.v1.ResourceSpans
 import io.opentelemetry.proto.trace.v1.ScopeSpans
 import io.opentelemetry.proto.trace.v1.Span
+import io.opentelemetry.semconv.CodeAttributes
+import io.opentelemetry.semconv.ServiceAttributes
+import io.opentelemetry.semconv.TelemetryAttributes
+import io.opentelemetry.semconv.incubating.VcsIncubatingAttributes
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import java.nio.charset.Charset
 import java.util.*
-import net.explorviz.trace.adapter.service.TokenService
-import net.explorviz.trace.adapter.service.converter.AttributesReader
-import net.explorviz.trace.adapter.service.converter.IdHelper
-import net.explorviz.avro.EventType
-import net.explorviz.avro.LandscapeToken
+import net.explorviz.trace.adapter.service.converter.OtelSpan
 import net.explorviz.avro.TokenEvent
+import net.explorviz.trace.attributes.ExplorvizAttributes
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.TestInputTopic
@@ -29,11 +29,7 @@ import org.apache.kafka.streams.TopologyTestDriver
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 
 @QuarkusTest
 class TopologyTest {
@@ -87,39 +83,27 @@ class TopologyTest {
         val attributes =
             listOf(
                 KeyValue.newBuilder()
-                    .setKey(AttributesReader.LANDSCAPE_TOKEN)
+                    .setKey(ExplorvizAttributes.TOKEN_ID.key)
                     .setValue(AnyValue.newBuilder().setStringValue("token").build())
                     .build(),
                 KeyValue.newBuilder()
-                    .setKey(AttributesReader.GIT_COMMIT_CHECKSUM)
-                    .setValue(AnyValue.newBuilder().setStringValue("testGitCommit").build())
-                    .build(),
-                KeyValue.newBuilder()
-                    .setKey(AttributesReader.TOKEN_SECRET)
+                    .setKey(ExplorvizAttributes.TOKEN_SECRET.key)
                     .setValue(AnyValue.newBuilder().setStringValue("secret").build())
                     .build(),
                 KeyValue.newBuilder()
-                    .setKey(AttributesReader.HOST_NAME)
-                    .setValue(AnyValue.newBuilder().setStringValue("hostname").build())
+                    .setKey(VcsIncubatingAttributes.VCS_REF_HEAD_REVISION.key)
+                    .setValue(AnyValue.newBuilder().setStringValue("testGitCommit").build())
                     .build(),
                 KeyValue.newBuilder()
-                    .setKey(AttributesReader.HOST_IP)
-                    .setValue(AnyValue.newBuilder().setStringValue("1.2.3.4").build())
-                    .build(),
-                KeyValue.newBuilder()
-                    .setKey(AttributesReader.APPLICATION_NAME)
+                    .setKey(ServiceAttributes.SERVICE_NAME.key)
                     .setValue(AnyValue.newBuilder().setStringValue("appname").build())
                     .build(),
                 KeyValue.newBuilder()
-                    .setKey(AttributesReader.APPLICATION_INSTANCE_ID)
-                    .setValue(AnyValue.newBuilder().setStringValue("1234").build())
-                    .build(),
-                KeyValue.newBuilder()
-                    .setKey(AttributesReader.APPLICATION_LANGUAGE)
+                    .setKey(TelemetryAttributes.TELEMETRY_SDK_LANGUAGE.key)
                     .setValue(AnyValue.newBuilder().setStringValue("language").build())
                     .build(),
                 KeyValue.newBuilder()
-                    .setKey(AttributesReader.METHOD_FQN)
+                    .setKey(CodeAttributes.CODE_FUNCTION_NAME.key)
                     .setValue(AnyValue.newBuilder().setStringValue("net.example.Bar.foo()").build())
                     .build(),
             )

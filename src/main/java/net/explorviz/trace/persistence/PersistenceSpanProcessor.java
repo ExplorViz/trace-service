@@ -29,9 +29,10 @@ public class PersistenceSpanProcessor implements Consumer<PersistenceSpan> {
 
   @Override
   public void accept(final PersistenceSpan span) {
-    final Set<String> knownSpanIds = knownSpanIdsByLandscape.computeIfAbsent(span.landscapeToken(),
-        tokenValue  -> ConcurrentHashMap.newKeySet());
-    if (knownSpanIds.add(span.spanId())) {
+    final Set<String> knownSpanIds =
+        knownSpanIdsByLandscape.computeIfAbsent(span.getLandscapeTokenId(),
+            tokenValue -> ConcurrentHashMap.newKeySet());
+    if (knownSpanIds.add(span.getSpanId())) {
       exporter.persistSpan(span);
       lastExportedSpans.incrementAndGet();
     }

@@ -1,91 +1,73 @@
 package net.explorviz.trace.adapter.service.converter
 
+import io.opentelemetry.proto.common.v1.InstrumentationScope
+import io.opentelemetry.proto.resource.v1.Resource
+import io.opentelemetry.proto.trace.v1.Span
+import io.opentelemetry.semconv.ServiceAttributes
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.*
-import net.explorviz.trace.adapter.service.converter.fqn.DefaultParser
-import net.explorviz.trace.adapter.service.converter.fqn.FqnParser
-import net.explorviz.trace.adapter.service.converter.fqn.JavaFqnParser
+import net.explorviz.trace.adapter.service.parsing.CodeSpanParser
+import net.explorviz.trace.adapter.service.parsing.SpanParser
+import net.explorviz.trace.adapter.service.parsing.SpanParsingException
+import net.explorviz.trace.attributes.ExplorvizAttributes
+import net.explorviz.trace.extensions.getAttributeValue
 import net.explorviz.trace.persistence.PersistenceSpan
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import net.explorviz.trace.persistence.SpanEntity
 
 /** Converts a [io.opentelemetry.proto.trace.v1.Span] to a [PersistenceSpan]. */
 @ApplicationScoped
 class SpanConverterImpl : SpanConverter<PersistenceSpan> {
-
     companion object {
-        private val LOGGER: Logger = LoggerFactory.getLogger(SpanConverterImpl::class.java)
-
-        private val JAVA_PARSER = JavaFqnParser()
-        private val DEFAULT_PARSER = DefaultParser()
-
-        private val PARSERS = mapOf(
-            "java" to JAVA_PARSER,
+        val parsers = arrayOf(
+            CodeSpanParser(),
         )
-
-        fun getFqnParser(language: String): FqnParser {
-            return PARSERS[language.lowercase()] ?: DEFAULT_PARSER
-        }
     }
 
-    override fun fromOpenTelemetrySpan(ocSpan: io.opentelemetry.proto.trace.v1.Span): PersistenceSpan {
+    override fun fromOpenTelemetrySpan(
+        span: Span, scope: InstrumentationScope, resource: Resource
+    ): Result<PersistenceSpan> {
+        val landscapeTokenId: String = span.getAttributeValue(ExplorvizAttributes.TOKEN_ID.key)?.stringValue
+            ?: ExplorvizAttributes.TOKEN_ID.defaultValue
 
-        val attributesReader = AttributesReader(ocSpan)
+        val landscapeTokenSecret: String = span.getAttributeValue(ExplorvizAttributes.TOKEN_SECRET.key)?.stringValue
+            ?: ExplorvizAttributes.TOKEN_SECRET.defaultValue
 
-        val gitCommitChecksum = attributesReader.gitCommitChecksum
-        val spanId = IdHelper.convertSpanId(ocSpan.spanId.toByteArray())
-        val traceId = IdHelper.convertTraceId(ocSpan.traceId.toByteArray())
-        val startTime = ocSpan.startTimeUnixNano
-        val endTime = ocSpan.endTimeUnixNano
-        val nodeIpAddress = attributesReader.hostIpAddress
-        val hostName = attributesReader.hostName
-        val applicationName = attributesReader.applicationName
-        val applicationLanguage = attributesReader.applicationLanguage
-        val applicationInstance = attributesReader.applicationInstanceId
-        val filePathAttrib = attributesReader.filePath
-        val methodFqn = attributesReader.methodFqn
-        val k8sPodName = attributesReader.k8sPodName
-        val k8sNodeName = attributesReader.k8sPodName
-        val k8sNamespace = attributesReader.k8sNamespace
-        val k8sDeploymentName = attributesReader.k8sDeploymentName
+        val traceId: String = IdHelper.convertTraceId(span.traceId.toByteArray())
+        val spanId: String = IdHelper.convertSpanId(span.spanId.toByteArray())
+        val parentSpanId: String? =
+            span.parentSpanId.takeIf { it.size() > 0 }?.toByteArray()?.let(IdHelper::convertSpanId)
 
-        val landscapeToken = attributesReader.landscapeToken;
+        val startTime: Long = span.startTimeUnixNano
+        val endTime: Long = span.endTimeUnixNano
 
-        val parentSpanId = if (ocSpan.parentSpanId.size() > 0) {
-            IdHelper.convertSpanId(ocSpan.parentSpanId.toByteArray())
-        } else {
-            ""
+        if (startTime > endTime) {
+            return Result.failure(SpanParsingException("Span start time must not exceed end time"))
         }
 
-        val parsingResult: FqnParser.ParsingResult = getFqnParser(applicationLanguage).parseFunctionFqn(methodFqn)
+        val serviceName: String =
+            resource.getAttributeValue(ServiceAttributes.SERVICE_NAME)?.stringValue ?: "Unknown Service"
 
-        // Explicit file path attribute takes precedence. If unset, then parse from fqn
-        val filePath =
-            if (filePathAttrib != DefaultAttributeValues.DEFAULT_FILE_PATH) filePathAttrib else parsingResult.filePath
+        val spanEntity: SpanEntity = parsers
+            .asSequence()
+            .firstNotNullOfOrNull {
+                when (val result = it.parse(span, scope, resource)) {
+                    is SpanParser.SpanParseResult.Success -> result.value
+                    else -> null
+                }
+            } ?: return Result.failure(SpanParsingException("No suitable parser found"))
 
-        val functionName = parsingResult.functionName
-        val className = parsingResult.className
-
-        return PersistenceSpan(
-            landscapeToken,
-            gitCommitChecksum,
-            spanId,
-            parentSpanId,
-            traceId,
-            startTime,
-            endTime,
-            nodeIpAddress,
-            hostName,
-            applicationName,
-            applicationLanguage ?: PersistenceSpan.DEFAULT_LANGUAGE,
-            applicationInstance,
-            filePath,
-            functionName,
-            className,
-            k8sPodName,
-            k8sNodeName,
-            k8sNamespace,
-            k8sDeploymentName,
+        return Result.success(
+            PersistenceSpan(
+                landscapeTokenId,
+                landscapeTokenSecret,
+                traceId,
+                spanId,
+                parentSpanId,
+                startTime,
+                endTime,
+                serviceName,
+                spanEntity,
+            ),
         )
     }
 }
