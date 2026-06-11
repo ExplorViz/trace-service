@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+option go_package = "github.com/ExplorViz/trace-service/internal/proto/spanpb";
+
+message SpanData {
+  string landscape_token_id = 1;
+  string landscape_token_secret = 2;
+
+  string trace_id = 3;
+  string span_id = 4;
+  string span_name = 5;
+  optional string parent_id = 6;
+
+  uint64 start_time = 7;
+  uint64 end_time = 8;
+
+  string application_name = 9;
+
+  oneof entity_descriptor {
+    CodeDescriptor code_descriptor = 10;
+  }
+}
+
+message CodeDescriptor {
+  string id = 1;
+  string file_path = 2;
+  string function_name = 3;
+  optional string class_name = 4;
+  optional string language = 5;
+  optional string git_commit_hash = 6;
+}

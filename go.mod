@@ -4,7 +4,6 @@ go 1.25.10
 
 require (
 	github.com/twmb/franz-go v1.21.3
-	github.com/twmb/franz-go/pkg/sr v1.7.0
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/proto/otlp v1.10.0
 	google.golang.org/protobuf v1.36.11

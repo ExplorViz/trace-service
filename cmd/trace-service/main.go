@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/ExplorViz/trace-service/internal/conversion"
@@ -56,7 +58,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	spans := make(chan SpanRequest)
+	spans := make(chan parsing.SpanReader)
+	results := make(chan conversion.PersistenceSpan)
+
+	workerCount := runtime.NumCPU()
+	for range workerCount {
+		go spanWorker(spans, results, cl)
+	}
 
 	for {
 		fs := cl.PollFetches(context.Background())
@@ -71,7 +79,7 @@ func main() {
 			for _, rs := range req.ResourceSpans {
 				for _, ss := range rs.ScopeSpans {
 					for _, s := range ss.Spans {
-						spans <- SpanRequest{s, ss.Scope, rs.Resource}
+						spans <- parsing.NewSpanReader(s, ss.Scope, rs.Resource)
 					}
 				}
 			}
@@ -79,9 +87,19 @@ func main() {
 	}
 }
 
-func worker(spans <-chan SpanRequest, cl *kgo.Client) {
-	for req := range spans {
-		s := parsing.NewSpanReader(req.Span, req.Scope, req.Resource)
-		conversion.ConvertSpan(s)
+func spanWorker(spans <-chan parsing.SpanReader, results chan<- conversion.PersistenceSpan, cl *kgo.Client) {
+	for s := range spans {
+		p, err := conversion.ConvertSpan(s)
+		if err != nil {
+			slog.Error(fmt.Sprintf("failed to convert span: %s", err))
+			continue
+		}
+		results <- p
+	}
+}
+
+func producerWorker(results <-chan conversion.PersistenceSpan, cl *kgo.Client) {
+	for p := range results {
+
 	}
 }
