@@ -2,7 +2,6 @@ package conversion
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/ExplorViz/trace-service/internal/conversion/parsing"
@@ -40,6 +39,7 @@ type PersistenceSpan struct {
 
 	TraceId      string
 	SpanId       string
+	SpanName     string
 	ParentSpanId string
 
 	StartTime uint64
@@ -61,7 +61,7 @@ func ConvertSpan(sr parsing.SpanReader) (PersistenceSpan, error) {
 	for _, parser := range parserChain {
 		res, err := parser(sr)
 		if err != nil {
-			slog.Debug(fmt.Sprintf("parser failed: %s", err))
+			slog.Debug("parser failed", "error", err)
 			continue
 		}
 		return PersistenceSpan{

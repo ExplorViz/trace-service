@@ -17,6 +17,7 @@ func ParseFunctionFqn(fqn string, language string) FqnParseResult {
 	case "java":
 		return parseJavaFqn(fqn)
 	default:
+		slog.Warn("unknown or missing SDK language, using generic fqn parser", "telemetry.sdk.language", language)
 		return parseGenericFqn(fqn)
 	}
 }
@@ -77,7 +78,6 @@ func parseJavaFqn(fqn string) FqnParseResult {
 //
 //	["src/main/SomeFile", "myFunc", ""]
 func parseGenericFqn(fqn string) FqnParseResult {
-	slog.Warn("unknown or missing SDK language, using generic fqn parser")
 	separatedFqn := strings.Split(fqn, ".")
 	return FqnParseResult{
 		FilePath: strings.Join(separatedFqn[:len(separatedFqn)-1], "/"),

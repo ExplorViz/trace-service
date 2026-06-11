@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/ExplorViz/trace-service/internal/proto/spanpb";
+option go_package = "github.com/ExplorViz/trace-service/internal/genproto/spanpb";
 
 message SpanData {
   string landscape_token_id = 1;
