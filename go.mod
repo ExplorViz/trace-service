@@ -3,6 +3,7 @@ module github.com/ExplorViz/trace-service
 go 1.25.10
 
 require (
+	github.com/peterbourgon/ff/v4 v4.0.0-beta.1
 	github.com/twmb/franz-go v1.21.3
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/proto/otlp v1.10.0

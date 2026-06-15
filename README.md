@@ -24,7 +24,7 @@ You can run the service using:
 ```shell
 go run . [OPTIONS]
 ```
-To see a list of command-line options, use the `--help` flag. These options can also be configured via environment variables.
+To see a list of command-line options, use the `--help` flag. These options can also be configured via environment variables, where the name of the environment variable corresponds to the long flag name, prefixed by `EXPLORVIZ_` and with all separators replaced by underscores; for example, the `--log-level` flag corresponds to the `EXPLORVIZ_LOG_LEVEL` environment variable. Note that directly passing flags takes precedence over environment variables. If neither the flag nor the environment variable is set, then the default value indicated by `--help` is used.
 
 ## Building an executable
 

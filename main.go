@@ -15,27 +15,41 @@ import (
 
 	"github.com/ExplorViz/trace-service/internal/kafka/spanproc"
 	"github.com/ExplorViz/trace-service/internal/kafka/tokenproc"
+	"github.com/peterbourgon/ff/v4"
+	"github.com/peterbourgon/ff/v4/ffhelp"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
-var (
-	seedBroker     = flag.String("broker", "localhost:9091", "network endpoint of the Kafka broker to use")
-	inTopic        = flag.String("topic-in", "telemetry.spans.raw", "Kafka topic to consume OpenTelemetry OTLP spans from")
-	outTopic       = flag.String("topic-out", "telemetry.spans.parsed", "Kafka topic to produce parsed spans into")
-	tokensTopic    = flag.String("topic-tokens", "tokens.events", "Kafka topic to consume landscape token events from")
-	validateTokens = flag.Bool("validate-tokens", false, "whether to verify the existence of provided landscape tokens for incoming traces")
-	logInterval    = flag.Duration("log-interval", 5*time.Second, "interval at which received spans should be logged (0 to disable)")
-)
-
 func main() {
-	slog.SetLogLoggerLevel(slog.LevelDebug)
+	fs := ff.NewFlagSet("trace-service")
+	var (
+		seedBroker     = fs.String('b', "broker", "localhost:9091", "network endpoint of the Kafka broker to use")
+		inTopic        = fs.String('i', "topic-in", "telemetry.spans.raw", "Kafka topic to consume OpenTelemetry OTLP spans from")
+		outTopic       = fs.String('o', "topic-out", "telemetry.spans.parsed", "Kafka topic to produce parsed spans into")
+		tokensTopic    = fs.String('t', "topic-tokens", "tokens.events", "Kafka topic to consume landscape token events from")
+		validateTokens = fs.BoolLong("validate-tokens", "whether to verify the existence of provided landscape tokens for incoming traces")
+		logLevel       = fs.StringEnum('l', "log-level", "log level: info, error, debug", "info", "error", "debug")
+		logInterval    = fs.DurationLong("log-interval", 5*time.Second, "interval at which received spans should be logged (0 to disable)")
+	)
+	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarPrefix("EXPLORVIZ")); err != nil {
+		fmt.Println(err)
+		fmt.Printf("%s\n", ffhelp.Flags(fs))
+		os.Exit(0)
+	}
 
-	flag.Parse()
 	if *logInterval < 0 {
 		slog.Error("span logging duration must be positive")
 		flag.Usage()
 		os.Exit(1)
+	}
+	switch *logLevel {
+	case "info":
+		slog.SetLogLoggerLevel(slog.LevelInfo)
+	case "error":
+		slog.SetLogLoggerLevel(slog.LevelError)
+	case "debug":
+		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
 
 	spanCl, err := kgo.NewClient(
