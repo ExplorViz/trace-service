@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ExplorViz/trace-service/internal/attrib"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
@@ -20,7 +21,7 @@ func (c CodeSpanEntity) Id() string {
 	return c.FilePath + " " + c.FuncName + " " + c.ClassName + " " + c.GitCommitHash
 }
 
-func ParseCodeSpan(s SpanReader) (SpanEntity, error) {
+func ParseCodeSpan(s *attrib.SpanReader) (SpanEntity, error) {
 	fqn := s.SpanAttribute(semconv.CodeFunctionNameKey).GetStringValue()
 	lang := s.ResourceAttribute(semconv.TelemetrySDKLanguageKey).GetStringValue()
 

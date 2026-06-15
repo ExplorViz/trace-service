@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option go_package = "github.com/ExplorViz/trace-service/internal/genproto/spanpb";
 
-message SpanData {
+message ParsedSpan {
   string landscape_token_id = 1;
   string landscape_token_secret = 2;
 

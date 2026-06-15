@@ -4,36 +4,12 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/ExplorViz/trace-service/internal/conversion/parsing"
-	"go.opentelemetry.io/otel/attribute"
+	"github.com/ExplorViz/trace-service/internal/attrib"
+	"github.com/ExplorViz/trace-service/internal/parsing"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
-type ExplorVizAttribute struct {
-	Key          attribute.Key
-	DefaultValue string
-}
-
-var ExplorVizAttributes = struct {
-	LandscapeTokenID     ExplorVizAttribute
-	LandscapeTokenSecret ExplorVizAttribute
-	EntityId             ExplorVizAttribute
-}{
-	LandscapeTokenID: ExplorVizAttribute{
-		Key:          "explorviz.token.id",
-		DefaultValue: "mytokenvalue",
-	},
-	LandscapeTokenSecret: ExplorVizAttribute{
-		Key:          "explorviz.token.secret",
-		DefaultValue: "mytokenvalue",
-	},
-	EntityId: ExplorVizAttribute{
-		Key:          "explorviz.entity.id",
-		DefaultValue: "unknown",
-	},
-}
-
-type PersistenceSpan struct {
+type ParsedSpan struct {
 	LandscapeTokenId     string
 	LandscapeTokenSecret string
 
@@ -53,9 +29,9 @@ var parserChain = []parsing.SpanParser{
 	parsing.ParseCodeSpan,
 }
 
-func ConvertSpan(sr parsing.SpanReader) (PersistenceSpan, error) {
-	tokenId := sr.ResourceAttribute(ExplorVizAttributes.LandscapeTokenID.Key).GetStringValue()
-	tokenSecret := sr.ResourceAttribute(ExplorVizAttributes.LandscapeTokenSecret.Key).GetStringValue()
+func ConvertSpan(sr *attrib.SpanReader) (ParsedSpan, error) {
+	tokenId := sr.ResourceAttribute(attrib.ExplorVizAttributes.LandscapeTokenID.Key).GetStringValue()
+	tokenSecret := sr.ResourceAttribute(attrib.ExplorVizAttributes.LandscapeTokenSecret.Key).GetStringValue()
 	appName := sr.ResourceAttribute(semconv.ServiceNameKey).GetStringValue()
 
 	for _, parser := range parserChain {
@@ -64,7 +40,7 @@ func ConvertSpan(sr parsing.SpanReader) (PersistenceSpan, error) {
 			slog.Debug("parser failed", "error", err)
 			continue
 		}
-		return PersistenceSpan{
+		return ParsedSpan{
 			LandscapeTokenId:     tokenId,
 			LandscapeTokenSecret: tokenSecret,
 
@@ -79,5 +55,5 @@ func ConvertSpan(sr parsing.SpanReader) (PersistenceSpan, error) {
 			Entity:          res,
 		}, nil
 	}
-	return PersistenceSpan{}, errors.New("no matching span parser found")
+	return ParsedSpan{}, errors.New("no matching span parser found")
 }

@@ -1,4 +1,4 @@
-package parsing
+package attrib
 
 import (
 	"go.opentelemetry.io/otel/attribute"
@@ -8,6 +8,9 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
+// A SpanReader groups a Protobuf [tracepb.Span] together with its [commonpb.InstrumentationScope]
+// and [resourcepb.Resource]. It provides helper methods for efficient lookup of attributes
+// by leveraging pre-constructed maps.
 type SpanReader struct {
 	Span     *tracepb.Span
 	Scope    *commonpb.InstrumentationScope
@@ -22,6 +25,10 @@ func (s SpanReader) SpanAttribute(key attribute.Key) *commonpb.AnyValue {
 	return s.spanAttributes[string(key)]
 }
 
+func (s SpanReader) ScopeAttribute(key attribute.Key) *commonpb.AnyValue {
+	return s.scopeAttributes[string(key)]
+}
+
 func (s SpanReader) ResourceAttribute(key attribute.Key) *commonpb.AnyValue {
 	return s.resourceAttributes[string(key)]
 }
@@ -32,12 +39,6 @@ func NewSpanReader(s *tracepb.Span, sc *commonpb.InstrumentationScope, rs *resou
 		scopeAttributes:    attrsToMap(sc.Attributes),
 		resourceAttributes: attrsToMap(rs.Attributes),
 	}
-}
-
-type SpanParser func(s SpanReader) (SpanEntity, error)
-
-type SpanEntity interface {
-	Id() string
 }
 
 func attrsToMap(attrs []*commonpb.KeyValue) map[string]*commonpb.AnyValue {

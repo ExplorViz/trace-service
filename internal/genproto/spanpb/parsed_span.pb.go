@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v3.19.6
-// source: persistence_span.proto
+// source: parsed_span.proto
 
 package spanpb
 
@@ -21,7 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type SpanData struct {
+type ParsedSpan struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	LandscapeTokenId     string                 `protobuf:"bytes,1,opt,name=landscape_token_id,json=landscapeTokenId,proto3" json:"landscape_token_id,omitempty"`
 	LandscapeTokenSecret string                 `protobuf:"bytes,2,opt,name=landscape_token_secret,json=landscapeTokenSecret,proto3" json:"landscape_token_secret,omitempty"`
@@ -34,27 +34,27 @@ type SpanData struct {
 	ApplicationName      string                 `protobuf:"bytes,9,opt,name=application_name,json=applicationName,proto3" json:"application_name,omitempty"`
 	// Types that are valid to be assigned to EntityDescriptor:
 	//
-	//	*SpanData_CodeDescriptor
-	EntityDescriptor isSpanData_EntityDescriptor `protobuf_oneof:"entity_descriptor"`
+	//	*ParsedSpan_CodeDescriptor
+	EntityDescriptor isParsedSpan_EntityDescriptor `protobuf_oneof:"entity_descriptor"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
-func (x *SpanData) Reset() {
-	*x = SpanData{}
-	mi := &file_persistence_span_proto_msgTypes[0]
+func (x *ParsedSpan) Reset() {
+	*x = ParsedSpan{}
+	mi := &file_parsed_span_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SpanData) String() string {
+func (x *ParsedSpan) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SpanData) ProtoMessage() {}
+func (*ParsedSpan) ProtoMessage() {}
 
-func (x *SpanData) ProtoReflect() protoreflect.Message {
-	mi := &file_persistence_span_proto_msgTypes[0]
+func (x *ParsedSpan) ProtoReflect() protoreflect.Message {
+	mi := &file_parsed_span_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -65,99 +65,99 @@ func (x *SpanData) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SpanData.ProtoReflect.Descriptor instead.
-func (*SpanData) Descriptor() ([]byte, []int) {
-	return file_persistence_span_proto_rawDescGZIP(), []int{0}
+// Deprecated: Use ParsedSpan.ProtoReflect.Descriptor instead.
+func (*ParsedSpan) Descriptor() ([]byte, []int) {
+	return file_parsed_span_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SpanData) GetLandscapeTokenId() string {
+func (x *ParsedSpan) GetLandscapeTokenId() string {
 	if x != nil {
 		return x.LandscapeTokenId
 	}
 	return ""
 }
 
-func (x *SpanData) GetLandscapeTokenSecret() string {
+func (x *ParsedSpan) GetLandscapeTokenSecret() string {
 	if x != nil {
 		return x.LandscapeTokenSecret
 	}
 	return ""
 }
 
-func (x *SpanData) GetTraceId() string {
+func (x *ParsedSpan) GetTraceId() string {
 	if x != nil {
 		return x.TraceId
 	}
 	return ""
 }
 
-func (x *SpanData) GetSpanId() string {
+func (x *ParsedSpan) GetSpanId() string {
 	if x != nil {
 		return x.SpanId
 	}
 	return ""
 }
 
-func (x *SpanData) GetSpanName() string {
+func (x *ParsedSpan) GetSpanName() string {
 	if x != nil {
 		return x.SpanName
 	}
 	return ""
 }
 
-func (x *SpanData) GetParentId() string {
+func (x *ParsedSpan) GetParentId() string {
 	if x != nil && x.ParentId != nil {
 		return *x.ParentId
 	}
 	return ""
 }
 
-func (x *SpanData) GetStartTime() uint64 {
+func (x *ParsedSpan) GetStartTime() uint64 {
 	if x != nil {
 		return x.StartTime
 	}
 	return 0
 }
 
-func (x *SpanData) GetEndTime() uint64 {
+func (x *ParsedSpan) GetEndTime() uint64 {
 	if x != nil {
 		return x.EndTime
 	}
 	return 0
 }
 
-func (x *SpanData) GetApplicationName() string {
+func (x *ParsedSpan) GetApplicationName() string {
 	if x != nil {
 		return x.ApplicationName
 	}
 	return ""
 }
 
-func (x *SpanData) GetEntityDescriptor() isSpanData_EntityDescriptor {
+func (x *ParsedSpan) GetEntityDescriptor() isParsedSpan_EntityDescriptor {
 	if x != nil {
 		return x.EntityDescriptor
 	}
 	return nil
 }
 
-func (x *SpanData) GetCodeDescriptor() *CodeDescriptor {
+func (x *ParsedSpan) GetCodeDescriptor() *CodeDescriptor {
 	if x != nil {
-		if x, ok := x.EntityDescriptor.(*SpanData_CodeDescriptor); ok {
+		if x, ok := x.EntityDescriptor.(*ParsedSpan_CodeDescriptor); ok {
 			return x.CodeDescriptor
 		}
 	}
 	return nil
 }
 
-type isSpanData_EntityDescriptor interface {
-	isSpanData_EntityDescriptor()
+type isParsedSpan_EntityDescriptor interface {
+	isParsedSpan_EntityDescriptor()
 }
 
-type SpanData_CodeDescriptor struct {
+type ParsedSpan_CodeDescriptor struct {
 	CodeDescriptor *CodeDescriptor `protobuf:"bytes,10,opt,name=code_descriptor,json=codeDescriptor,proto3,oneof"`
 }
 
-func (*SpanData_CodeDescriptor) isSpanData_EntityDescriptor() {}
+func (*ParsedSpan_CodeDescriptor) isParsedSpan_EntityDescriptor() {}
 
 type CodeDescriptor struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -173,7 +173,7 @@ type CodeDescriptor struct {
 
 func (x *CodeDescriptor) Reset() {
 	*x = CodeDescriptor{}
-	mi := &file_persistence_span_proto_msgTypes[1]
+	mi := &file_parsed_span_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -185,7 +185,7 @@ func (x *CodeDescriptor) String() string {
 func (*CodeDescriptor) ProtoMessage() {}
 
 func (x *CodeDescriptor) ProtoReflect() protoreflect.Message {
-	mi := &file_persistence_span_proto_msgTypes[1]
+	mi := &file_parsed_span_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -198,7 +198,7 @@ func (x *CodeDescriptor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CodeDescriptor.ProtoReflect.Descriptor instead.
 func (*CodeDescriptor) Descriptor() ([]byte, []int) {
-	return file_persistence_span_proto_rawDescGZIP(), []int{1}
+	return file_parsed_span_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *CodeDescriptor) GetId() string {
@@ -243,12 +243,13 @@ func (x *CodeDescriptor) GetGitCommitHash() string {
 	return ""
 }
 
-var File_persistence_span_proto protoreflect.FileDescriptor
+var File_parsed_span_proto protoreflect.FileDescriptor
 
-const file_persistence_span_proto_rawDesc = "" +
+const file_parsed_span_proto_rawDesc = "" +
 	"\n" +
-	"\x16persistence_span.proto\"\xa5\x03\n" +
-	"\bSpanData\x12,\n" +
+	"\x11parsed_span.proto\"\xa7\x03\n" +
+	"\n" +
+	"ParsedSpan\x12,\n" +
 	"\x12landscape_token_id\x18\x01 \x01(\tR\x10landscapeTokenId\x124\n" +
 	"\x16landscape_token_secret\x18\x02 \x01(\tR\x14landscapeTokenSecret\x12\x19\n" +
 	"\btrace_id\x18\x03 \x01(\tR\atraceId\x12\x17\n" +
@@ -277,24 +278,24 @@ const file_persistence_span_proto_rawDesc = "" +
 	"\x10_git_commit_hashB=Z;github.com/ExplorViz/trace-service/internal/genproto/spanpbb\x06proto3"
 
 var (
-	file_persistence_span_proto_rawDescOnce sync.Once
-	file_persistence_span_proto_rawDescData []byte
+	file_parsed_span_proto_rawDescOnce sync.Once
+	file_parsed_span_proto_rawDescData []byte
 )
 
-func file_persistence_span_proto_rawDescGZIP() []byte {
-	file_persistence_span_proto_rawDescOnce.Do(func() {
-		file_persistence_span_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_persistence_span_proto_rawDesc), len(file_persistence_span_proto_rawDesc)))
+func file_parsed_span_proto_rawDescGZIP() []byte {
+	file_parsed_span_proto_rawDescOnce.Do(func() {
+		file_parsed_span_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_parsed_span_proto_rawDesc), len(file_parsed_span_proto_rawDesc)))
 	})
-	return file_persistence_span_proto_rawDescData
+	return file_parsed_span_proto_rawDescData
 }
 
-var file_persistence_span_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_persistence_span_proto_goTypes = []any{
-	(*SpanData)(nil),       // 0: SpanData
+var file_parsed_span_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_parsed_span_proto_goTypes = []any{
+	(*ParsedSpan)(nil),     // 0: ParsedSpan
 	(*CodeDescriptor)(nil), // 1: CodeDescriptor
 }
-var file_persistence_span_proto_depIdxs = []int32{
-	1, // 0: SpanData.code_descriptor:type_name -> CodeDescriptor
+var file_parsed_span_proto_depIdxs = []int32{
+	1, // 0: ParsedSpan.code_descriptor:type_name -> CodeDescriptor
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -302,30 +303,30 @@ var file_persistence_span_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_persistence_span_proto_init() }
-func file_persistence_span_proto_init() {
-	if File_persistence_span_proto != nil {
+func init() { file_parsed_span_proto_init() }
+func file_parsed_span_proto_init() {
+	if File_parsed_span_proto != nil {
 		return
 	}
-	file_persistence_span_proto_msgTypes[0].OneofWrappers = []any{
-		(*SpanData_CodeDescriptor)(nil),
+	file_parsed_span_proto_msgTypes[0].OneofWrappers = []any{
+		(*ParsedSpan_CodeDescriptor)(nil),
 	}
-	file_persistence_span_proto_msgTypes[1].OneofWrappers = []any{}
+	file_parsed_span_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_persistence_span_proto_rawDesc), len(file_persistence_span_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_parsed_span_proto_rawDesc), len(file_parsed_span_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_persistence_span_proto_goTypes,
-		DependencyIndexes: file_persistence_span_proto_depIdxs,
-		MessageInfos:      file_persistence_span_proto_msgTypes,
+		GoTypes:           file_parsed_span_proto_goTypes,
+		DependencyIndexes: file_parsed_span_proto_depIdxs,
+		MessageInfos:      file_parsed_span_proto_msgTypes,
 	}.Build()
-	File_persistence_span_proto = out.File
-	file_persistence_span_proto_goTypes = nil
-	file_persistence_span_proto_depIdxs = nil
+	File_parsed_span_proto = out.File
+	file_parsed_span_proto_goTypes = nil
+	file_parsed_span_proto_depIdxs = nil
 }
