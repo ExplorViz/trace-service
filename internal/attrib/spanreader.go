@@ -21,6 +21,14 @@ type SpanReader struct {
 	resourceAttributes map[string]*commonpb.AnyValue
 }
 
+func NewSpanReader(s *tracepb.Span, sc *commonpb.InstrumentationScope, rs *resourcepb.Resource) SpanReader {
+	return SpanReader{
+		spanAttributes:     attrsToMap(s.GetAttributes()),
+		scopeAttributes:    attrsToMap(sc.GetAttributes()),
+		resourceAttributes: attrsToMap(rs.GetAttributes()),
+	}
+}
+
 func (s SpanReader) SpanAttribute(key attribute.Key) *commonpb.AnyValue {
 	return s.spanAttributes[string(key)]
 }
@@ -31,14 +39,6 @@ func (s SpanReader) ScopeAttribute(key attribute.Key) *commonpb.AnyValue {
 
 func (s SpanReader) ResourceAttribute(key attribute.Key) *commonpb.AnyValue {
 	return s.resourceAttributes[string(key)]
-}
-
-func NewSpanReader(s *tracepb.Span, sc *commonpb.InstrumentationScope, rs *resourcepb.Resource) SpanReader {
-	return SpanReader{
-		spanAttributes:     attrsToMap(s.Attributes),
-		scopeAttributes:    attrsToMap(sc.Attributes),
-		resourceAttributes: attrsToMap(rs.Attributes),
-	}
 }
 
 func attrsToMap(attrs []*commonpb.KeyValue) map[string]*commonpb.AnyValue {

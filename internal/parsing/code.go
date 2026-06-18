@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ExplorViz/trace-service/internal/attrib"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+
+	"github.com/ExplorViz/trace-service/internal/attrib"
 )
 
 type CodeSpanEntity struct {

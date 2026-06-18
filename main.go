@@ -13,12 +13,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ExplorViz/trace-service/internal/kafka/spanproc"
-	"github.com/ExplorViz/trace-service/internal/kafka/tokenproc"
 	"github.com/peterbourgon/ff/v4"
 	"github.com/peterbourgon/ff/v4/ffhelp"
-
 	"github.com/twmb/franz-go/pkg/kgo"
+
+	"github.com/ExplorViz/trace-service/internal/kafka/spanproc"
+	"github.com/ExplorViz/trace-service/internal/kafka/tokenproc"
 )
 
 func main() {

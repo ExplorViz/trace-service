@@ -8,9 +8,10 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/ExplorViz/trace-service/internal/genproto/tokenpb"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/ExplorViz/trace-service/internal/genproto/tokenpb"
 )
 
 // A TokenStore keeps track of existing landscape tokens and their corresponding token secrets.
@@ -58,6 +59,7 @@ func Run(ctx context.Context, cl *kgo.Client, ts *TokenStore) {
 		fs.EachRecord(func(r *kgo.Record) {
 			if r.Value == nil {
 				ts.delete(string(r.Key))
+				slog.Debug("received token delete event", "tokenID", r.Key)
 				return
 			}
 
@@ -68,6 +70,7 @@ func Run(ctx context.Context, cl *kgo.Client, ts *TokenStore) {
 			}
 
 			ts.put(string(r.Key), t.GetToken().GetSecret())
+			slog.Debug("received token create event", "tokenID", t.GetToken().GetId(), "tokenSecret", t.GetToken().GetSecret())
 		})
 	}
 }

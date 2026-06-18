@@ -4,9 +4,10 @@ import (
 	"errors"
 	"log/slog"
 
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+
 	"github.com/ExplorViz/trace-service/internal/attrib"
 	"github.com/ExplorViz/trace-service/internal/parsing"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
 type ParsedSpan struct {

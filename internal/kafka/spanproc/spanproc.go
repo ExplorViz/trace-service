@@ -9,12 +9,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/twmb/franz-go/pkg/kgo"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/ExplorViz/trace-service/internal/attrib"
 	"github.com/ExplorViz/trace-service/internal/conversion"
 	"github.com/ExplorViz/trace-service/internal/genproto/spanpb"
 	"github.com/ExplorViz/trace-service/internal/kafka/tokenproc"
-	"github.com/twmb/franz-go/pkg/kgo"
-	"google.golang.org/protobuf/proto"
 
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 )
@@ -58,10 +59,10 @@ func Run(ctx context.Context, cl *kgo.Client, validateTokens bool, ts *tokenproc
 				return
 			}
 
-			for _, rs := range req.ResourceSpans {
-				for _, ss := range rs.ScopeSpans {
-					for _, s := range ss.Spans {
-						sr := attrib.NewSpanReader(s, ss.Scope, rs.Resource)
+			for _, rs := range req.GetResourceSpans() {
+				for _, ss := range rs.GetScopeSpans() {
+					for _, s := range ss.GetSpans() {
+						sr := attrib.NewSpanReader(s, ss.GetScope(), rs.GetResource())
 						spans <- &sr
 					}
 				}
@@ -116,7 +117,7 @@ func producerWorker(ctx context.Context, results <-chan *spanpb.ParsedSpan, cl *
 				continue
 			}
 			cl.ProduceSync(ctx, &kgo.Record{
-				Key:   []byte(s.LandscapeTokenId),
+				Key:   []byte(s.GetLandscapeTokenId()),
 				Value: out,
 			})
 		}
