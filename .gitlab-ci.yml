@@ -45,7 +45,7 @@ build:
   extends: .go-cache
   stage: build
   script:
-    - gogo build -o trace-service .
+    - go build -o trace-service .
   artifacts:
     paths:
       - ./trace-service
