@@ -16,7 +16,7 @@ import (
 
 // A TokenStore keeps track of existing landscape tokens and their corresponding token secrets.
 type TokenStore struct {
-	mu sync.Mutex
+	mu sync.RWMutex
 	m  map[string]string
 }
 
@@ -43,6 +43,9 @@ func (s *TokenStore) delete(id string) {
 // HasToken reports whether the store knows about a landscape token
 // with the given ID and secret
 func (s *TokenStore) HasToken(id string, secret string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	val, ok := s.m[id]
 	return ok && val == secret
 }

@@ -22,15 +22,49 @@ import (
 
 var lastReceivedSpans atomic.Uint64
 var lastInvalidSpans atomic.Uint64
+var lastExportedSpans atomic.Uint64
+var lastKnownSpans atomic.Uint64
+
+type spanCache struct {
+	mu sync.Mutex
+	m  map[string]map[string]bool
+}
+
+func newSpanCache() spanCache {
+	return spanCache{
+		m: make(map[string]map[string]bool),
+	}
+}
+
+func (s *spanCache) add(landscapeTokenID string, spanID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.m[landscapeTokenID][spanID] = true
+}
+
+func (s *spanCache) contains(landscapeTokenID string, spanID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	m, ok := s.m[landscapeTokenID]
+	if !ok {
+		return false
+	}
+
+	_, ok = m[spanID]
+	return ok
+}
 
 func Run(ctx context.Context, cl *kgo.Client, validateTokens bool, ts *tokenproc.TokenStore, logInterval time.Duration) {
 	spans := make(chan *attrib.SpanReader)
 	results := make(chan *spanpb.ParsedSpan)
+	knownSpans := newSpanCache()
 
 	workerCount := runtime.NumCPU()
 	var wg sync.WaitGroup
 	for range workerCount {
-		wg.Go(func() { consumerWorker(ctx, spans, results, ts, validateTokens) })
+		wg.Go(func() { consumerWorker(ctx, spans, results, &knownSpans, ts, validateTokens) })
 	}
 	wg.Go(func() { producerWorker(ctx, results, cl) })
 
@@ -40,8 +74,12 @@ func Run(ctx context.Context, cl *kgo.Client, validateTokens bool, ts *tokenproc
 			defer ticker.Stop()
 
 			for range ticker.C {
-				count := lastReceivedSpans.Swap(0)
-				slog.Info(fmt.Sprintf("received %d spans", count))
+				slog.Info(
+					"span log interval",
+					"received", lastReceivedSpans.Swap(0),
+					"invalid", lastInvalidSpans.Swap(0),
+					"exported", lastExportedSpans.Swap(0),
+					"known", lastKnownSpans.Swap(0))
 			}
 		}()
 	}
@@ -73,31 +111,34 @@ func Run(ctx context.Context, cl *kgo.Client, validateTokens bool, ts *tokenproc
 	wg.Wait()
 }
 
-func consumerWorker(ctx context.Context, spans <-chan *attrib.SpanReader, results chan<- *spanpb.ParsedSpan, ts *tokenproc.TokenStore, validateTokens bool) {
+func consumerWorker(ctx context.Context, spans <-chan *attrib.SpanReader, results chan<- *spanpb.ParsedSpan, sc *spanCache, ts *tokenproc.TokenStore, validateTokens bool) {
 	for {
 		select {
 		case <-ctx.Done():
 			slog.Debug("exiting span consumer worker")
 			return
 
-		case s := <-spans:
+		case sr := <-spans:
 			lastReceivedSpans.Add(1)
 
-			if validateTokens {
-				tokenID := s.SpanAttribute(attrib.ExplorVizAttributes.LandscapeTokenID.Key).GetStringValue()
-				tokenSecret := s.SpanAttribute(attrib.ExplorVizAttributes.LandscapeTokenSecret.Key).GetStringValue()
-				if !ts.HasToken(tokenID, tokenSecret) {
-					slog.Debug("invalid span: unknown landscape token ID or incorrect secret", "landscapeTokenID", tokenID)
-					lastInvalidSpans.Add(1)
-					continue
-				}
+			if err := validate(sr, ts, validateTokens); err != nil {
+				lastInvalidSpans.Add(1)
+				slog.Debug("received invalid span", "error", err)
 			}
 
-			p, err := conversion.ConvertSpan(s)
+			tokenID := sr.TokenID()
+			if sc.contains(tokenID, string(sr.Span.SpanId)) {
+				lastKnownSpans.Add(1)
+				slog.Debug("received already known span", "spanID", sr.Span.SpanId)
+				continue
+			}
+
+			p, err := conversion.ConvertSpan(sr)
 			if err != nil {
 				slog.Error("failed to convert span", "error", err)
 				continue
 			}
+			sc.add(tokenID, string(sr.Span.SpanId))
 			results <- conversion.ToProto(p)
 		}
 	}
@@ -120,6 +161,24 @@ func producerWorker(ctx context.Context, results <-chan *spanpb.ParsedSpan, cl *
 				Key:   []byte(s.GetLandscapeTokenId()),
 				Value: out,
 			})
+			lastExportedSpans.Add(1)
 		}
 	}
+}
+
+func validate(sr *attrib.SpanReader, ts *tokenproc.TokenStore, validateTokens bool) error {
+	id := sr.TokenID()
+	secret := sr.TokenSecret()
+
+	if id == "" || secret == "" {
+		return fmt.Errorf("missing landscape token ID or secret attribute")
+	}
+
+	if validateTokens {
+		if !ts.HasToken(id, secret) {
+			return fmt.Errorf("unknown landscape token ID \"%s\" or incorrect secret", id)
+		}
+	}
+
+	return nil
 }

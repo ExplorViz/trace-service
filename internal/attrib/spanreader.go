@@ -29,16 +29,30 @@ func NewSpanReader(s *tracepb.Span, sc *commonpb.InstrumentationScope, rs *resou
 	}
 }
 
-func (s SpanReader) SpanAttribute(key attribute.Key) *commonpb.AnyValue {
-	return s.spanAttributes[string(key)]
+func (sr SpanReader) SpanAttribute(key attribute.Key) *commonpb.AnyValue {
+	return sr.spanAttributes[string(key)]
 }
 
-func (s SpanReader) ScopeAttribute(key attribute.Key) *commonpb.AnyValue {
-	return s.scopeAttributes[string(key)]
+func (sr SpanReader) ScopeAttribute(key attribute.Key) *commonpb.AnyValue {
+	return sr.scopeAttributes[string(key)]
 }
 
-func (s SpanReader) ResourceAttribute(key attribute.Key) *commonpb.AnyValue {
-	return s.resourceAttributes[string(key)]
+func (sr SpanReader) ResourceAttribute(key attribute.Key) *commonpb.AnyValue {
+	return sr.resourceAttributes[string(key)]
+}
+
+func (sr SpanReader) TokenID() string {
+	if v := sr.ResourceAttribute(ExplorVizAttributes.LandscapeTokenID.Key).GetStringValue(); v != "" {
+		return v
+	}
+	return sr.SpanAttribute(ExplorVizAttributes.LandscapeTokenID.Key).GetStringValue()
+}
+
+func (sr SpanReader) TokenSecret() string {
+	if v := sr.ResourceAttribute(ExplorVizAttributes.LandscapeTokenSecret.Key).GetStringValue(); v != "" {
+		return v
+	}
+	return sr.SpanAttribute(ExplorVizAttributes.LandscapeTokenSecret.Key).GetStringValue()
 }
 
 func attrsToMap(attrs []*commonpb.KeyValue) map[string]*commonpb.AnyValue {
