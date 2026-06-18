@@ -47,7 +47,8 @@ build:
   script:
     - gogo build -o trace-service .
   artifacts:
-    paths: ./trace-service
+    paths:
+      - ./trace-service
 
 code-lint:
   image: "golangci/golangci-lint:${GOLANGCI_LINT_VERSION}"
