@@ -62,6 +62,7 @@ code-lint:
 
 proto-lint:
   image: "bufbuild/buf:${BUF_VERSION}"
+  stage: code-analysis
   rules:
     - changes:
         - "**/*.proto"
