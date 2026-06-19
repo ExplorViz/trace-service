@@ -19,6 +19,7 @@ import (
 
 	"github.com/ExplorViz/trace-service/internal/kafka/spanproc"
 	"github.com/ExplorViz/trace-service/internal/kafka/tokenproc"
+	"github.com/ExplorViz/trace-service/internal/token"
 )
 
 func main() {
@@ -88,12 +89,16 @@ func main() {
 	}()
 
 	var wg sync.WaitGroup
-	ts := tokenproc.NewTokenStore()
-	wg.Go(func() { spanproc.Run(ctx, spanCl, *validateTokens, &ts, *logInterval) })
 
+	var tv token.TokenValidator
 	if *validateTokens {
-		wg.Go(func() { tokenproc.Run(ctx, tokenCl, &ts) })
+		inmem := token.NewInMemTokenStore()
+		wg.Go(func() { tokenproc.Run(ctx, tokenCl, inmem) })
+		tv = inmem
+	} else {
+		tv = token.NoOpTokenValidator{}
 	}
+	wg.Go(func() { spanproc.Run(ctx, spanCl, tv, *logInterval) })
 
 	fmt.Print(`
   ______            _         __      ___
