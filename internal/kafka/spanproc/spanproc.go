@@ -23,7 +23,7 @@ import (
 var lastReceivedSpans atomic.Uint64
 var lastInvalidSpans atomic.Uint64
 var lastExportedSpans atomic.Uint64
-var lastKnownSpans atomic.Uint64
+var lastDuplicateSpans atomic.Uint64
 
 type spanCache struct {
 	mu sync.Mutex
@@ -75,11 +75,11 @@ func Run(ctx context.Context, cl *kgo.Client, tv token.TokenValidator, logInterv
 
 			for range ticker.C {
 				slog.Info(
-					"span log interval",
+					"logging span counts since last log interval",
 					"received", lastReceivedSpans.Swap(0),
 					"invalid", lastInvalidSpans.Swap(0),
 					"exported", lastExportedSpans.Swap(0),
-					"known", lastKnownSpans.Swap(0))
+					"duplicates", lastDuplicateSpans.Swap(0))
 			}
 		}()
 	}
@@ -128,8 +128,8 @@ func consumerWorker(ctx context.Context, spans <-chan *attrib.SpanReader, result
 
 			tokenID := sr.TokenID()
 			if sc.contains(tokenID, string(sr.Span.GetSpanId())) {
-				lastKnownSpans.Add(1)
-				slog.Debug("received already known span", "spanID", sr.Span.GetSpanId())
+				lastDuplicateSpans.Add(1)
+				slog.Debug("received already seen span ID", "spanID", sr.Span.GetSpanId())
 				continue
 			}
 

@@ -1,4 +1,5 @@
-//go:generate go run ./scripts/genproto.go
+//go:generate go run ./scripts/genproto/genproto.go
+//go:generate go run ./scripts/reghook/reghook.go
 
 package main
 
@@ -29,7 +30,7 @@ func main() {
 		inTopic        = fs.String('i', "topic-in", "telemetry.spans.raw", "Kafka topic to consume OpenTelemetry OTLP spans from")
 		outTopic       = fs.String('o', "topic-out", "telemetry.spans.parsed", "Kafka topic to produce parsed spans into")
 		tokensTopic    = fs.String('t', "topic-tokens", "tokens.events", "Kafka topic to consume landscape token events from")
-		validateTokens = fs.BoolLong("validate-tokens", "whether to verify the existence of provided landscape tokens for incoming traces")
+		validateTokens = fs.Bool('v', "validate-tokens", "whether to verify the existence of provided landscape tokens for incoming traces")
 		logLevel       = fs.StringEnum('l', "log-level", "log level: info, error, debug", "info", "error", "debug")
 		logInterval    = fs.DurationLong("log-interval", 5*time.Second, "interval at which received spans should be logged (0 to disable)")
 	)

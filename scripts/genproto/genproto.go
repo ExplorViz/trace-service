@@ -16,6 +16,8 @@ import (
 )
 
 func main() {
+	fmt.Println("generating protobuf code")
+
 	files, err := filepath.Glob("./proto/*.proto")
 	if err != nil {
 		fmt.Printf("error matching glob pattern: %v\n", err)
@@ -23,7 +25,7 @@ func main() {
 	}
 
 	if len(files) == 0 {
-		fmt.Println("no matching files found")
+		fmt.Println("no matching proto files found")
 		return
 	}
 
@@ -37,4 +39,6 @@ func main() {
 		fmt.Printf("protobuf generation failed: %v\n", err)
 		os.Exit(1)
 	}
+
+	fmt.Println("successfully generated protobuf code")
 }
