@@ -1,6 +1,8 @@
 package attrib
 
 import (
+	"encoding/hex"
+
 	"go.opentelemetry.io/otel/attribute"
 
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -23,6 +25,10 @@ type SpanReader struct {
 
 func NewSpanReader(s *tracepb.Span, sc *commonpb.InstrumentationScope, rs *resourcepb.Resource) SpanReader {
 	return SpanReader{
+		Span:     s,
+		Scope:    sc,
+		Resource: rs,
+
 		spanAttributes:     attrsToMap(s.GetAttributes()),
 		scopeAttributes:    attrsToMap(sc.GetAttributes()),
 		resourceAttributes: attrsToMap(rs.GetAttributes()),
@@ -39,6 +45,18 @@ func (sr SpanReader) ScopeAttribute(key attribute.Key) *commonpb.AnyValue {
 
 func (sr SpanReader) ResourceAttribute(key attribute.Key) *commonpb.AnyValue {
 	return sr.resourceAttributes[string(key)]
+}
+
+func (sr SpanReader) TraceID() string {
+	return hex.EncodeToString(sr.Span.GetTraceId())
+}
+
+func (sr SpanReader) SpanID() string {
+	return hex.EncodeToString(sr.Span.GetSpanId())
+}
+
+func (sr SpanReader) ParentSpanID() string {
+	return hex.EncodeToString(sr.Span.GetParentSpanId())
 }
 
 func (sr SpanReader) TokenID() string {

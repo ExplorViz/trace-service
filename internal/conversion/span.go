@@ -45,9 +45,9 @@ func ConvertSpan(sr *attrib.SpanReader) (ParsedSpan, error) {
 			LandscapeTokenId:     tokenId,
 			LandscapeTokenSecret: tokenSecret,
 
-			TraceId:      string(sr.Span.GetTraceId()),
-			SpanId:       string(sr.Span.GetSpanId()),
-			ParentSpanId: string(sr.Span.GetParentSpanId()),
+			TraceId:      sr.TraceID(),
+			SpanId:       sr.SpanID(),
+			ParentSpanId: sr.ParentSpanID(),
 
 			StartTime: sr.Span.GetStartTimeUnixNano(),
 			EndTime:   sr.Span.GetEndTimeUnixNano(),

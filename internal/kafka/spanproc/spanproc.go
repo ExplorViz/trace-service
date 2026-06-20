@@ -40,7 +40,13 @@ func (s *spanCache) add(landscapeTokenID string, spanID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.m[landscapeTokenID][spanID] = true
+	m, ok := s.m[landscapeTokenID]
+	if !ok {
+		s.m[landscapeTokenID] = make(map[string]bool)
+		m = s.m[landscapeTokenID]
+	}
+
+	m[spanID] = true
 }
 
 func (s *spanCache) contains(landscapeTokenID string, spanID string) bool {
@@ -127,9 +133,9 @@ func consumerWorker(ctx context.Context, spans <-chan *attrib.SpanReader, result
 			}
 
 			tokenID := sr.TokenID()
-			if sc.contains(tokenID, string(sr.Span.GetSpanId())) {
+			if sc.contains(tokenID, sr.SpanID()) {
 				lastDuplicateSpans.Add(1)
-				slog.Debug("received already seen span ID", "spanID", sr.Span.GetSpanId())
+				slog.Debug("received already seen span ID", "spanID", sr.SpanID())
 				continue
 			}
 
@@ -138,7 +144,7 @@ func consumerWorker(ctx context.Context, spans <-chan *attrib.SpanReader, result
 				slog.Error("failed to convert span", "error", err)
 				continue
 			}
-			sc.add(tokenID, string(sr.Span.GetSpanId()))
+			sc.add(tokenID, sr.SpanID())
 			results <- conversion.ToProto(p)
 		}
 	}
