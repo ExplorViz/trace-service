@@ -61,7 +61,9 @@ code-lint:
       codequality: gl-code-quality-report.json
 
 proto-lint:
-  image: "bufbuild/buf:${BUF_VERSION}"
+  image:
+    name: "bufbuild/buf:${BUF_VERSION}"
+    entrypoint: [""]
   stage: code-analysis
   rules:
     - changes:
