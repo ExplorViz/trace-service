@@ -9,11 +9,12 @@ message TokenEvent {
 }
 
 enum EventType {
-  CREATED = 0;
-  DELETED = 1;
-  CLONED = 2;
-  ACCESS_GRANTED = 3;
-  ACCESS_REVOKED = 4;
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_CREATED = 1;
+  EVENT_TYPE_DELETED = 2;
+  EVENT_TYPE_CLONED = 3;
+  EVENT_TYPE_ACCESS_GRANTED = 4;
+  EVENT_TYPE_ACCESS_REVOKED = 5;
 }
 
 message LandscapeToken {

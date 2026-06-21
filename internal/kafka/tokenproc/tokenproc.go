@@ -25,7 +25,7 @@ func Run(ctx context.Context, cl *kgo.Client, ts *token.InMemTokenStore) {
 		fs.EachRecord(func(r *kgo.Record) {
 			if r.Value == nil {
 				ts.Delete(string(r.Key))
-				slog.Debug("received token delete event", "tokenID", r.Key)
+				slog.Debug("received tombstone token record, deleting token", "tokenID", r.Key)
 				return
 			}
 
@@ -35,8 +35,16 @@ func Run(ctx context.Context, cl *kgo.Client, ts *token.InMemTokenStore) {
 				return
 			}
 
-			ts.Put(token.LandscapeToken{ID: string(r.Key), Secret: t.GetToken().GetSecret()})
-			slog.Debug("received token create event", "tokenID", t.GetToken().GetId(), "tokenSecret", t.GetToken().GetSecret())
+			switch t.GetType() {
+			case tokenpb.EventType_EVENT_TYPE_CREATED:
+				ts.Put(token.LandscapeToken{ID: string(r.Key), Secret: t.GetToken().GetSecret()})
+				slog.Debug("received token create event", "tokenID", t.GetToken().GetId(), "tokenSecret", t.GetToken().GetSecret())
+			case tokenpb.EventType_EVENT_TYPE_DELETED:
+				ts.Delete(string(r.Key))
+				slog.Debug("received token delete event", "tokenID", r.Key)
+			default:
+				slog.Warn("received unhandled token event type", "eventType", tokenpb.EventType_name[int32(t.GetType())])
+			}
 		})
 	}
 }

@@ -24,28 +24,31 @@ const (
 type EventType int32
 
 const (
-	EventType_CREATED        EventType = 0
-	EventType_DELETED        EventType = 1
-	EventType_CLONED         EventType = 2
-	EventType_ACCESS_GRANTED EventType = 3
-	EventType_ACCESS_REVOKED EventType = 4
+	EventType_EVENT_TYPE_UNSPECIFIED    EventType = 0
+	EventType_EVENT_TYPE_CREATED        EventType = 1
+	EventType_EVENT_TYPE_DELETED        EventType = 2
+	EventType_EVENT_TYPE_CLONED         EventType = 3
+	EventType_EVENT_TYPE_ACCESS_GRANTED EventType = 4
+	EventType_EVENT_TYPE_ACCESS_REVOKED EventType = 5
 )
 
 // Enum value maps for EventType.
 var (
 	EventType_name = map[int32]string{
-		0: "CREATED",
-		1: "DELETED",
-		2: "CLONED",
-		3: "ACCESS_GRANTED",
-		4: "ACCESS_REVOKED",
+		0: "EVENT_TYPE_UNSPECIFIED",
+		1: "EVENT_TYPE_CREATED",
+		2: "EVENT_TYPE_DELETED",
+		3: "EVENT_TYPE_CLONED",
+		4: "EVENT_TYPE_ACCESS_GRANTED",
+		5: "EVENT_TYPE_ACCESS_REVOKED",
 	}
 	EventType_value = map[string]int32{
-		"CREATED":        0,
-		"DELETED":        1,
-		"CLONED":         2,
-		"ACCESS_GRANTED": 3,
-		"ACCESS_REVOKED": 4,
+		"EVENT_TYPE_UNSPECIFIED":    0,
+		"EVENT_TYPE_CREATED":        1,
+		"EVENT_TYPE_DELETED":        2,
+		"EVENT_TYPE_CLONED":         3,
+		"EVENT_TYPE_ACCESS_GRANTED": 4,
+		"EVENT_TYPE_ACCESS_REVOKED": 5,
 	}
 )
 
@@ -119,7 +122,7 @@ func (x *TokenEvent) GetType() EventType {
 	if x != nil {
 		return x.Type
 	}
-	return EventType_CREATED
+	return EventType_EVENT_TYPE_UNSPECIFIED
 }
 
 func (x *TokenEvent) GetToken() *LandscapeToken {
@@ -229,14 +232,14 @@ const file_token_event_proto_rawDesc = "" +
 	"\x06secret\x18\x02 \x01(\tR\x06secret\x12\x14\n" +
 	"\x05alias\x18\x03 \x01(\tR\x05alias\x12\x19\n" +
 	"\bowner_id\x18\x04 \x01(\tR\aownerId\x12\x18\n" +
-	"\acreated\x18\x05 \x01(\x04R\acreated*Y\n" +
-	"\tEventType\x12\v\n" +
-	"\aCREATED\x10\x00\x12\v\n" +
-	"\aDELETED\x10\x01\x12\n" +
-	"\n" +
-	"\x06CLONED\x10\x02\x12\x12\n" +
-	"\x0eACCESS_GRANTED\x10\x03\x12\x12\n" +
-	"\x0eACCESS_REVOKED\x10\x04B>Z<github.com/ExplorViz/trace-service/internal/genproto/tokenpbb\x06proto3"
+	"\acreated\x18\x05 \x01(\x04R\acreated*\xac\x01\n" +
+	"\tEventType\x12\x1a\n" +
+	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12EVENT_TYPE_CREATED\x10\x01\x12\x16\n" +
+	"\x12EVENT_TYPE_DELETED\x10\x02\x12\x15\n" +
+	"\x11EVENT_TYPE_CLONED\x10\x03\x12\x1d\n" +
+	"\x19EVENT_TYPE_ACCESS_GRANTED\x10\x04\x12\x1d\n" +
+	"\x19EVENT_TYPE_ACCESS_REVOKED\x10\x05B>Z<github.com/ExplorViz/trace-service/internal/genproto/tokenpbb\x06proto3"
 
 var (
 	file_token_event_proto_rawDescOnce sync.Once
