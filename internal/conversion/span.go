@@ -36,7 +36,7 @@ func ConvertSpan(sr *attrib.SpanReader) (ParsedSpan, error) {
 	appName := sr.ResourceAttribute(semconv.ServiceNameKey).GetStringValue()
 
 	for _, parser := range parserChain {
-		res, err := parser(sr)
+		entity, err := parser(sr)
 		if err != nil {
 			slog.Debug("parser failed", "error", err)
 			continue
@@ -53,7 +53,7 @@ func ConvertSpan(sr *attrib.SpanReader) (ParsedSpan, error) {
 			EndTime:   sr.Span.GetEndTimeUnixNano(),
 
 			ApplicationName: appName,
-			Entity:          res,
+			Entity:          entity,
 		}, nil
 	}
 	return ParsedSpan{}, errors.New("no matching span parser found")

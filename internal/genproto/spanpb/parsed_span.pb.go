@@ -32,6 +32,7 @@ type ParsedSpan struct {
 	StartTime            uint64                 `protobuf:"varint,7,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
 	EndTime              uint64                 `protobuf:"varint,8,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
 	ApplicationName      string                 `protobuf:"bytes,9,opt,name=application_name,json=applicationName,proto3" json:"application_name,omitempty"`
+	EntityId             string                 `protobuf:"bytes,10,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"` // Identifier for the entity described by the span (e.g. function, database, ...)
 	// Types that are valid to be assigned to EntityDescriptor:
 	//
 	//	*ParsedSpan_CodeDescriptor
@@ -133,6 +134,13 @@ func (x *ParsedSpan) GetApplicationName() string {
 	return ""
 }
 
+func (x *ParsedSpan) GetEntityId() string {
+	if x != nil {
+		return x.EntityId
+	}
+	return ""
+}
+
 func (x *ParsedSpan) GetEntityDescriptor() isParsedSpan_EntityDescriptor {
 	if x != nil {
 		return x.EntityDescriptor
@@ -154,19 +162,18 @@ type isParsedSpan_EntityDescriptor interface {
 }
 
 type ParsedSpan_CodeDescriptor struct {
-	CodeDescriptor *CodeDescriptor `protobuf:"bytes,10,opt,name=code_descriptor,json=codeDescriptor,proto3,oneof"`
+	CodeDescriptor *CodeDescriptor `protobuf:"bytes,11,opt,name=code_descriptor,json=codeDescriptor,proto3,oneof"`
 }
 
 func (*ParsedSpan_CodeDescriptor) isParsedSpan_EntityDescriptor() {}
 
 type CodeDescriptor struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	FilePath      string                 `protobuf:"bytes,2,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
-	FunctionName  string                 `protobuf:"bytes,3,opt,name=function_name,json=functionName,proto3" json:"function_name,omitempty"`
-	ClassName     *string                `protobuf:"bytes,4,opt,name=class_name,json=className,proto3,oneof" json:"class_name,omitempty"`
-	Language      *string                `protobuf:"bytes,5,opt,name=language,proto3,oneof" json:"language,omitempty"`
-	GitCommitHash *string                `protobuf:"bytes,6,opt,name=git_commit_hash,json=gitCommitHash,proto3,oneof" json:"git_commit_hash,omitempty"`
+	FilePath      string                 `protobuf:"bytes,1,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
+	FunctionName  string                 `protobuf:"bytes,2,opt,name=function_name,json=functionName,proto3" json:"function_name,omitempty"`
+	ClassName     *string                `protobuf:"bytes,3,opt,name=class_name,json=className,proto3,oneof" json:"class_name,omitempty"` // Inner classes may be separated by "."
+	Language      *string                `protobuf:"bytes,4,opt,name=language,proto3,oneof" json:"language,omitempty"`
+	GitCommitHash *string                `protobuf:"bytes,5,opt,name=git_commit_hash,json=gitCommitHash,proto3,oneof" json:"git_commit_hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -199,13 +206,6 @@ func (x *CodeDescriptor) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CodeDescriptor.ProtoReflect.Descriptor instead.
 func (*CodeDescriptor) Descriptor() ([]byte, []int) {
 	return file_parsed_span_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *CodeDescriptor) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
 }
 
 func (x *CodeDescriptor) GetFilePath() string {
@@ -247,7 +247,7 @@ var File_parsed_span_proto protoreflect.FileDescriptor
 
 const file_parsed_span_proto_rawDesc = "" +
 	"\n" +
-	"\x11parsed_span.proto\"\xa7\x03\n" +
+	"\x11parsed_span.proto\"\xc4\x03\n" +
 	"\n" +
 	"ParsedSpan\x12,\n" +
 	"\x12landscape_token_id\x18\x01 \x01(\tR\x10landscapeTokenId\x124\n" +
@@ -259,20 +259,20 @@ const file_parsed_span_proto_rawDesc = "" +
 	"\n" +
 	"start_time\x18\a \x01(\x04R\tstartTime\x12\x19\n" +
 	"\bend_time\x18\b \x01(\x04R\aendTime\x12)\n" +
-	"\x10application_name\x18\t \x01(\tR\x0fapplicationName\x12:\n" +
-	"\x0fcode_descriptor\x18\n" +
-	" \x01(\v2\x0f.CodeDescriptorH\x00R\x0ecodeDescriptorB\x13\n" +
+	"\x10application_name\x18\t \x01(\tR\x0fapplicationName\x12\x1b\n" +
+	"\tentity_id\x18\n" +
+	" \x01(\tR\bentityId\x12:\n" +
+	"\x0fcode_descriptor\x18\v \x01(\v2\x0f.CodeDescriptorH\x00R\x0ecodeDescriptorB\x13\n" +
 	"\x11entity_descriptorB\f\n" +
 	"\n" +
-	"_parent_id\"\x84\x02\n" +
-	"\x0eCodeDescriptor\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
-	"\tfile_path\x18\x02 \x01(\tR\bfilePath\x12#\n" +
-	"\rfunction_name\x18\x03 \x01(\tR\ffunctionName\x12\"\n" +
+	"_parent_id\"\xf4\x01\n" +
+	"\x0eCodeDescriptor\x12\x1b\n" +
+	"\tfile_path\x18\x01 \x01(\tR\bfilePath\x12#\n" +
+	"\rfunction_name\x18\x02 \x01(\tR\ffunctionName\x12\"\n" +
 	"\n" +
-	"class_name\x18\x04 \x01(\tH\x00R\tclassName\x88\x01\x01\x12\x1f\n" +
-	"\blanguage\x18\x05 \x01(\tH\x01R\blanguage\x88\x01\x01\x12+\n" +
-	"\x0fgit_commit_hash\x18\x06 \x01(\tH\x02R\rgitCommitHash\x88\x01\x01B\r\n" +
+	"class_name\x18\x03 \x01(\tH\x00R\tclassName\x88\x01\x01\x12\x1f\n" +
+	"\blanguage\x18\x04 \x01(\tH\x01R\blanguage\x88\x01\x01\x12+\n" +
+	"\x0fgit_commit_hash\x18\x05 \x01(\tH\x02R\rgitCommitHash\x88\x01\x01B\r\n" +
 	"\v_class_nameB\v\n" +
 	"\t_languageB\x12\n" +
 	"\x10_git_commit_hashB=Z;github.com/ExplorViz/trace-service/internal/genproto/spanpbb\x06proto3"

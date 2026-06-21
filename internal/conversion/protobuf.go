@@ -19,6 +19,8 @@ func ToProto(ps ParsedSpan) *spanpb.ParsedSpan {
 		EndTime:   ps.EndTime,
 
 		ApplicationName: ps.ApplicationName,
+
+		EntityId: ps.Entity.Id(),
 	}
 
 	switch e := ps.Entity.(type) {

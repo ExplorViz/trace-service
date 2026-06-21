@@ -39,7 +39,7 @@ func parseJavaFqn(fqn string) FqnParseResult {
 
 	// Ignore lambda portion. If we explicitly want to support this, the data model would need to allow functions
 	// to have child functions. For now, we simplify and treat this as a call of the containing function.
-	fqnNoLambda := strings.SplitN(fqn, "$", 2)[0]
+	fqnNoLambda, _, _ := strings.Cut(fqn, "$")
 	separatedFqn := strings.Split(fqnNoLambda, ".")
 
 	lastPackageIndex := -1
