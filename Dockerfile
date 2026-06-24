@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /trace-service -ldflags="-s -w"
+RUN CGO_ENABLED=0 go build -o /trace-service -ldflags="-s -w"
 
 FROM scratch
 
