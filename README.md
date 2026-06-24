@@ -1,63 +1,68 @@
-# ExplorViz trace-service
+# trace-service
 
-Scalable service that processes, persists, aggregates and queries the observed traces of method executions within
-monitored software applications.
+The trace-service is a scalable service that processes, interprets, persists, and queries [OpenTelemetry execution traces](https://opentelemetry.io/docs/concepts/signals/traces/) within monitored software applications. It attempts to classify the entities described by incoming spans for the purpose of visualization.
 
-## Prerequisites
+Consumes traces sent via Kafka from an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) instance (defined in the [Deployment](../deployment)). Processed spans are produced to a Kafka topic for the [Landscape Service](../landscape-service) to consume. Interaction with Kafka is implemented using the [franz-go](https://github.com/twmb/franz-go) library.
 
-- Java 17 or higher
-- Make sure to run the [ExplorViz software stack](https://git.se.informatik.uni-kiel.de/ExplorViz/code/deployment)
+For development instructions, continue reading below. If you just want to run ExplorViz locally, refer to our [Deployment repository](../deployment) instead.
+
+## Development Instructions
+
+### Prerequisites
+
+- Go 1.25.10 or higher
+- A code editor, such as [Visual Studio Code](https://code.visualstudio.com/)
+- Make sure to run the [ExplorViz software stack](../deployment)
   before starting the service, as it provides the required database(s) and the Kafka broker
 
-## Running the application in dev mode
+### Running the service
 
-You can run your application in dev mode that enables live coding using:
-```shell script
-./gradlew quarkusDev
+You can run the service using:
+
+```shell
+go run . [OPTIONS]
 ```
 
-This also enables the `dev` configuration profile, i.e. using the properties prefixed with `%dev` from
-`src/main/resources/application.properties`.
+To see a list of command-line options, use the `--help` flag. These options can also be configured via environment variables, where the name of the environment variable corresponds to the long flag name, prefixed by `EXPLORVIZ_` and with all separators replaced by underscores; for example, the `--log-level` flag corresponds to the `EXPLORVIZ_LOG_LEVEL` environment variable. Note that directly passing flags takes precedence over environment variables. If neither the flag nor the environment variable is set, then the default value indicated by `--help` is used.
 
-**_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at http://localhost:8080/q/dev/.
+### Building an executable
 
-## Packaging and running the application
+To build an executable from the project, use:
 
-The application can be packaged and tested using:
-```shell script
-./gradlew build
-```
-It produces the `quarkus-run.jar` file in the `build/quarkus-app/` directory.
-
-You can skip running the integration tests by adding `-x integrationTest`. To skip all tests and code analysis use the
-`assemble` task instead of `build`.
-
-The application is now runnable using `java -jar build/quarkus-app/quarkus-run.jar`.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `build/quarkus-app/lib/` directory.
-
-If you want to build an _über-jar_, which includes the entire application in a single jar file, execute the following
-command:
-```shell script
-./gradlew build -Dquarkus.package.type=uber-jar
+```shell
+go build
 ```
 
-The application, packaged as an _über-jar_, is now runnable using
-`java -jar build/trace-service-1.0-SNAPSHOT-runner.jar`.
-You can add `-Dquarkus.profile=dev` to enable the `%dev` properties.
+By default, the executable will be placed in the root directory under the name `trace-service`. You can optionally specify the path of the resulting binary using the `-o <your-executable-name>` flag.
 
-## Creating a native executable
+### Testing
 
-You can create a native executable using:
-```shell script
-./gradlew build -Dquarkus.package.type=native
+Be sure to write tests for new code and ensure that existing tests pass. You can run all tests using:
+
+```shell
+go test ./...
 ```
 
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
-```shell script
-./gradlew build -Dquarkus.package.type=native -Dquarkus.native.container-build=true
+### Compiling Protobuf
+
+When updating any `.proto` files, make sure to compile the Protobuf files to Go using:
+
+```shell
+go generate
 ```
 
-You can then execute your native executable with: `./build/trace-service-1.0-SNAPSHOT-runner`
+Alternatively, you can use the provided Makefile to compile the Protobuf and build the project in a single step:
 
-If you want to learn more about building native executables, please consult
-https://quarkus.io/guides/gradle-tooling#building-a-native-executable.
+```shell
+make
+```
+
+If you just want to run the project while also compiling the Protobuf, use:
+
+```shell
+make run
+```
+
+### Code Style
+
+As part of our CI/CD pipeline, your code is linted and checked for formatting using [golangci-lint](https://github.com/golangci/golangci-lint), which you can also install locally to lint your code yourself prior to pushing. We recommend using the [official Visual Studio Code extension for Go](https://marketplace.visualstudio.com/items?itemName=golang.go) as well as [configuring the extension for golangci-lint](https://golangci-lint.run/docs/welcome/integrations/) to detect and fix linting / formatting issues as you're working.
