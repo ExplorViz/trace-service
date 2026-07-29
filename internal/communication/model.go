@@ -22,10 +22,10 @@ type Comm struct {
 	Bidirectional bool `json:"isBidirectional"`
 
 	// Earliest nanosecond Unix epoch timestamp at which a span represented by this Comm begins.
-	FromUnixNano int64 `json:"fromUnixNano"`
+	FromUnixNano int64 `json:"fromUnixNano,string"`
 
 	// Latest nanosecond Unix epoch timestamp at which a span represented by this Comm ends.
-	ToUnixNano int64 `json:"toUnixNano"`
+	ToUnixNano int64 `json:"toUnixNano,string"`
 
 	Metrics map[string]float64 `json:"metrics"`
 }
@@ -35,10 +35,10 @@ type CommSummary struct {
 	Comms []Comm `json:"communications"`
 
 	// Minimum from-timestamp among all communications within this summary.
-	FromUnixNano int64 `json:"fromUnixNano"`
+	FromUnixNano int64 `json:"fromUnixNano,string"`
 
 	// Maximum to-timestamp among all communications within this summary.
-	ToUnixNano int64 `json:"toUnixNano"`
+	ToUnixNano int64 `json:"toUnixNano,string"`
 
 	// Minimum and maximum value of metrics across all communications within this summary.
 	MetricsSummary map[string]MetricRange `json:"metrics"`
