@@ -5,7 +5,6 @@ include:
 variables:
   GO_DOCKER_VERSION: "1.26"
   GOLANGCI_LINT_VERSION: "v2.12"
-  BUF_VERSION: "1.71"
 
 default:
   tags:
@@ -59,19 +58,6 @@ code-lint:
   artifacts:
     reports:
       codequality: gl-code-quality-report.json
-
-proto-lint:
-  image:
-    name: "bufbuild/buf:${BUF_VERSION}"
-    entrypoint: [""]
-  stage: code-analysis
-  allow_failure: true
-  rules:
-    - changes:
-        - "**/*.proto"
-        - ./proto/buf.yaml
-  script:
-    - buf lint
 
 test:
   image: "golang:${GO_DOCKER_VERSION}"
