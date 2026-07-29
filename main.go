@@ -1,50 +1,45 @@
-//go:generate go run ./scripts/genproto/genproto.go
-//go:generate go run ./scripts/reghook/reghook.go
+//go:generate go run ./cmd/reghook/reghook.go
 
 package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
-	"sync"
+	"strconv"
 	"syscall"
-	"time"
 
+	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/peterbourgon/ff/v4"
 	"github.com/peterbourgon/ff/v4/ffhelp"
-	"github.com/twmb/franz-go/pkg/kgo"
+	"golang.org/x/sync/errgroup"
 
-	"github.com/ExplorViz/trace-service/internal/kafka/spanproc"
-	"github.com/ExplorViz/trace-service/internal/kafka/tokenproc"
-	"github.com/ExplorViz/trace-service/internal/token"
+	"github.com/ExplorViz/trace-service/internal/communication"
+	"github.com/ExplorViz/trace-service/internal/timestamp"
+	"github.com/ExplorViz/trace-service/internal/trace"
 )
 
 func main() {
 	fs := ff.NewFlagSet("trace-service")
 	var (
-		seedBroker     = fs.String('b', "broker", "localhost:9091", "network endpoint of the Kafka broker to use")
-		inTopic        = fs.String('i', "topic-in", "telemetry.spans.raw", "Kafka topic to consume OpenTelemetry OTLP spans from")
-		outTopic       = fs.String('o', "topic-out", "telemetry.spans.parsed", "Kafka topic to produce parsed spans into")
-		tokensTopic    = fs.String('t', "topic-tokens", "tokens.events", "Kafka topic to consume landscape token events from")
-		validateTokens = fs.Bool('v', "validate-tokens", "whether to verify the existence of provided landscape tokens for incoming traces (default: false)")
-		logLevel       = fs.StringEnum('l', "log-level", "log level: info, error, debug", "info", "error", "debug")
-		logInterval    = fs.DurationLong("log-interval", 5*time.Second, "interval at which received spans should be logged (0 to disable)")
+		httpPort   = fs.Int('p', "port", 8081, "port to listen on for incoming HTTP requests")
+		dbHostAddr = fs.String('a', "db-addr", "localhost:19000", "network endpoint at which the Clickhouse database runs")
+		dbName     = fs.StringLong("db-name", "default", "name of the Clickhouse database to use")
+		dbUser     = fs.String('u', "db-user", "default", "username to use with the Clickhouse instance")
+		dbPass     = fs.String('P', "db-pass", "", "password to use with the Clickhouse instance (insecure, prefer using env var)")
+		logLevel   = fs.StringEnum('l', "log-level", "log level: info, error, debug", "info", "error", "debug")
 	)
+
 	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarPrefix("EXPLORVIZ")); err != nil {
 		fmt.Println(err)
 		fmt.Printf("%s\n", ffhelp.Flags(fs))
 		os.Exit(0)
 	}
 
-	if *logInterval < 0 {
-		slog.Error("span logging duration must be positive")
-		flag.Usage()
-		os.Exit(1)
-	}
 	switch *logLevel {
 	case "info":
 		slog.SetLogLoggerLevel(slog.LevelInfo)
@@ -54,52 +49,47 @@ func main() {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
 
-	spanCl, err := kgo.NewClient(
-		kgo.SeedBrokers(*seedBroker),
-		kgo.ConsumeTopics(*inTopic),
-		kgo.DefaultProduceTopic(*outTopic),
-		kgo.ConsumerGroup("trace-service"),
-	)
+	conn, err := dbConnect(*dbHostAddr, *dbName, *dbUser, *dbPass)
 	if err != nil {
-		slog.Error("unable to initialize kgo client for spans", "error", err)
+		slog.Error("failed to establish database connection", "error", err, "hostAddress", *dbHostAddr)
 		os.Exit(1)
 	}
-	defer spanCl.Close()
 
-	tokenCl, err := kgo.NewClient(
-		kgo.SeedBrokers(*seedBroker),
-		kgo.ConsumeTopics(*tokensTopic),
-		kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()), // replay token events from beginning
-	)
-	if err != nil {
-		slog.Error("unable to initialize kgo client for token events", "error", err)
-		os.Exit(1)
-	}
-	defer tokenCl.Close()
+	mux := http.NewServeMux()
+
+	timestampRepo := timestamp.Repository{Conn: conn}
+	timestampHandler := timestamp.NewHandler(timestampRepo)
+	timestampHandler.Register(mux)
+
+	traceRepo := trace.Repository{Conn: conn}
+	traceHandler := trace.NewHandler(traceRepo)
+	traceHandler.Register(mux)
+
+	commRepo := communication.Repository{Conn: conn}
+	commHandler := communication.NewHandler(commRepo)
+	commHandler.Register(mux)
+
+	srv := &http.Server{Addr: ":" + strconv.Itoa(*httpPort), Handler: corsHandler(addContentTypeJSON(mux))}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	sigs := make(chan os.Signal, 2)
-	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.Go(srv.ListenAndServe)
+
 	go func() {
+		sigs := make(chan os.Signal, 2)
+		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+
 		<-sigs
 		slog.Info("received interrupt signal; gracefully stopping ...")
+		if err := srv.Shutdown(ctx); err != nil && err != ctx.Err() {
+			slog.Warn("error occurred during server shutdown", "error", err)
+		}
 		cancel()
+
 		<-sigs
 		slog.Info("received second interrupt signal; exiting immediately")
 		os.Exit(1)
 	}()
-
-	var wg sync.WaitGroup
-
-	var tv token.TokenValidator
-	if *validateTokens {
-		inmem := token.NewInMemTokenStore()
-		wg.Go(func() { tokenproc.Run(ctx, tokenCl, inmem) })
-		tv = inmem
-	} else {
-		tv = token.NoOpTokenValidator{}
-	}
-	wg.Go(func() { spanproc.Run(ctx, spanCl, tv, *logInterval) })
 
 	fmt.Print(`
   ______            _         __      ___
@@ -113,6 +103,66 @@ func main() {
 
 `)
 
-	<-ctx.Done()
-	wg.Wait()
+	if err := eg.Wait(); err != nil && err != http.ErrServerClosed {
+		slog.Error("unexpected server shutdown", "error", err)
+	}
+}
+
+func dbConnect(hostAddr string, dbName string, user string, pass string) (driver.Conn, error) {
+	var (
+		ctx       = context.Background()
+		conn, err = clickhouse.Open(&clickhouse.Options{
+			Addr: []string{hostAddr},
+			Auth: clickhouse.Auth{
+				Database: dbName,
+				Username: user,
+				Password: pass,
+			},
+		})
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := conn.Ping(ctx); err != nil {
+		if exception, ok := err.(*clickhouse.Exception); ok {
+			fmt.Printf("Exception [%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace)
+		}
+		return nil, err
+	}
+	return conn, nil
+}
+
+func addContentTypeJSON(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		next.ServeHTTP(w, r)
+	})
+}
+
+func corsHandler(next http.Handler) http.Handler {
+	allowedOrigins := map[string]struct{}{
+		"http://localhost:4200":                                 {},
+		"http://localhost:8080":                                 {},
+		"https://demo.explorviz.uni-kiel.de":                    {},
+		"https://explorviz.sustainkieker.kieker-monitoring.net": {},
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if _, ok := allowedOrigins[origin]; ok {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "*")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+		}
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			next.ServeHTTP(w, r)
+		}
+	})
 }

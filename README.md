@@ -1,10 +1,10 @@
 # trace-service
 
-The trace-service is a scalable service that processes, interprets, persists, and queries [OpenTelemetry execution traces](https://opentelemetry.io/docs/concepts/signals/traces/) within monitored software applications. It attempts to classify the entities described by incoming spans for the purpose of visualization.
+The trace-service is a scalable service that queries [OpenTelemetry execution traces](https://opentelemetry.io/docs/concepts/signals/traces/) gathered from monitored software applications. It provides a REST API for communication with the [frontend](https://github.com/ExplorViz/frontend). The trace-service is responsible for providing data regarding communcation between entities, including timestamps and detailed trace information.
 
-Consumes traces sent via Kafka from an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) instance (defined in the [Deployment](../deployment)). Processed spans are produced to a Kafka topic for the [Landscape Service](../landscape-service) to consume. Interaction with Kafka is implemented using the [franz-go](https://github.com/twmb/franz-go) library.
+Traces are queried from a [ClickHouse](https://github.com/clickhouse/clickhouse) database instance, which receives its data from our [custom OTel Collector](https://github.com/ExplorViz/otel-collector) via the ClickHouse exporter. The [custom schema](https://github.com/ExplorViz/deployment/tree/main/docker/compose/configurations/clickhouse) based on the ClickHouse exporter's default schema for traces with some materialized columns for efficient attribute access.
 
-For development instructions, continue reading below. If you just want to run ExplorViz locally, refer to our [Deployment repository](../deployment) instead.
+For development instructions, continue reading below. If you just want to run ExplorViz locally, refer to our [Deployment repository](https://github.com/ExplorViz/deployment) instead.
 
 ## Development Instructions
 
@@ -12,8 +12,8 @@ For development instructions, continue reading below. If you just want to run Ex
 
 - Go 1.25.10 or higher
 - A code editor, such as [Visual Studio Code](https://code.visualstudio.com/)
-- Make sure to run the [ExplorViz software stack](../deployment)
-  before starting the service, as it provides the required database(s) and the Kafka broker
+- Make sure to run the [ExplorViz software stack](https://github.com/ExplorViz/deployment)
+  before starting the service, as it provides the required database(s) and the Collector instance
 
 ### Running the service
 
@@ -43,24 +43,12 @@ Be sure to write tests for new code and ensure that existing tests pass. You can
 go test ./...
 ```
 
-### Compiling Protobuf
+### Installing Git hooks
 
-When updating any `.proto` files, make sure to compile the Protobuf files to Go using:
-
-```shell
-go generate
-```
-
-Alternatively, you can use the provided Makefile to compile the Protobuf and build the project in a single step:
+This repository provides Git hooks to verify your code prior to pushing. These can be installed via the included script by running:
 
 ```shell
-make
-```
-
-If you just want to run the project while also compiling the Protobuf, use:
-
-```shell
-make run
+go generate ./...
 ```
 
 ### Code Style
