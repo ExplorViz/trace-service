@@ -13,9 +13,21 @@ type Repository struct {
 	Table string
 }
 
+// findCommunication searches the database for any spans starting within the time span given by fromUnixNano (inclusive) and toUnixNano (exclusive)
+// where the span has a parent span. The child and parent span pairs are grouped by the visualization objects they represent, where the parent span
+// indicates the source object and the child indicates the target object. A single communication is inferred for any such source-target pair.
+// For each communication, general metrics are computed. To restrict search for spans to those associated with a specific commit, the commitHash value
+// can be used. If left empty, then the search is explicitly restricted to spans that have no associated commit.
 func (r *Repository) findCommunication(
 	ctx context.Context, landscapeToken string, fromUnixNano uint64, toUnixNano uint64, commitHash string,
 ) (CommSummary, error) {
+
+	params := []any{
+		clickhouse.Named("landscapeToken", landscapeToken),
+		clickhouse.Named("from", fromUnixNano),
+		clickhouse.Named("to", toUnixNano),
+		clickhouse.Named("commit", commitHash),
+	}
 
 	cs := []Comm{}
 
@@ -33,11 +45,12 @@ func (r *Repository) findCommunication(
 			FROM otel_traces c
 			INNER JOIN otel_traces p
 				ON c.ParentSpanId = p.SpanId
+				AND c.ExplorvizTokenId = p.ExplorvizTokenId
 			WHERE
-				ExplorvizTokenId = ?
-				AND Timestamp_ns > ?
-				AND Timestamp_ns < ?
-				AND coalesce(SpanAttributes['vcs.ref.head.revision'], '') = ?
+				c.ExplorvizTokenId = @landscapeToken
+				AND c.Timestamp_ns >= @from
+				AND c.Timestamp_ns < @to
+				AND coalesce(c.SpanAttributes['vcs.ref.head.revision'], '') = @commit
 			GROUP BY
 				c.ExplorvizVizObjectId, p.ExplorvizVizObjectId
 		)
@@ -61,7 +74,7 @@ func (r *Repository) findCommunication(
 		WHERE
 			a.SourceVizObjectId <= a.TargetVizObjectId
 			OR b.SourceVizObjectId = '';
-	`, landscapeToken, fromUnixNano, toUnixNano, commitHash)
+	`, params...)
 	if err != nil {
 		return CommSummary{}, err
 	}
@@ -96,6 +109,10 @@ func (r *Repository) findCommunication(
 	}, nil
 }
 
+// findFileCommDetails searches the database for any function calls underlying the communication between a source and target visualization object.
+// The searched time interval can be further restricted using fromUnixNano (inclusive) and toUnixNano (inclusive). To restrict search for spans
+// to those associated with a specific commit, the commitHash value can be used. If left empty, then the search is explicitly restricted to spans
+// that have no associated commit.
 func (r Repository) findFileCommDetails(
 	ctx context.Context, landscapeToken string, sourceVizObjID string, targetVizObjID string, fromUnixNano uint64, toUnixNano uint64, commitHash string,
 ) ([]FunctionCall, error) {
@@ -122,11 +139,11 @@ func (r Repository) findFileCommDetails(
 		INNER JOIN otel_traces p
 			ON c.ParentSpanId = p.SpanId
 		WHERE
-			ExplorvizTokenId = @landscapeToken
+			c.ExplorvizTokenId = @landscapeToken
 			AND ((c.ExplorvizVizObjectId = @src AND p.ExplorvizVizObjectId = @tgt) OR (c.ExplorvizVizObjectId = @tgt AND p.ExplorvizVizObjectId = @src))
-			AND Timestamp_ns >= @from
-			AND Timestamp_ns <= @to
-			AND coalesce(SpanAttributes['vcs.ref.head.revision'], '') = @commit
+			AND c.Timestamp_ns >= @from
+			AND c.Timestamp_ns <= @to
+			AND coalesce(c.SpanAttributes['vcs.ref.head.revision'], '') = @commit
 		GROUP BY c.ExplorvizEntityId, c.ExplorvizVizObjectId, c.ExplorvizFuncName;
 	`, params...)
 	if err != nil {
