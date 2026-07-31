@@ -35,8 +35,8 @@ func (r *Repository) findCommunication(
 		// Find communications and aggregate metrics
 		WITH comms AS (
 			SELECT
-				c.ExplorvizVizObjectId AS SourceVizObjectId,
-				p.ExplorvizVizObjectId AS TargetVizObjectId,
+				p.ExplorvizVizObjectId AS SourceVizObjectId,
+				c.ExplorvizVizObjectId AS TargetVizObjectId,
 				toFloat64(COUNT(c.SpanId)) AS RequestCount,
 				toFloat64(COUNT(DISTINCT c.ExplorvizFuncName)) AS FunctionCount,
 				toFloat64(sum(c.Duration)) AS ExecutionTime,
@@ -138,6 +138,7 @@ func (r Repository) findFileCommDetails(
 		FROM otel_traces c
 		INNER JOIN otel_traces p
 			ON c.ParentSpanId = p.SpanId
+			AND c.ExplorvizTokenId = p.ExplorvizTokenId
 		WHERE
 			c.ExplorvizTokenId = @landscapeToken
 			AND ((c.ExplorvizVizObjectId = @src AND p.ExplorvizVizObjectId = @tgt) OR (c.ExplorvizVizObjectId = @tgt AND p.ExplorvizVizObjectId = @src))
