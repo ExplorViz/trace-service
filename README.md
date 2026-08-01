@@ -2,7 +2,7 @@
 
 The trace-service is a scalable service that queries [OpenTelemetry execution traces](https://opentelemetry.io/docs/concepts/signals/traces/) gathered from monitored software applications. It provides a REST API for communication with the [frontend](https://github.com/ExplorViz/frontend). The trace-service is responsible for providing data regarding communcation between entities, including timestamps and detailed trace information.
 
-Traces are queried from a [ClickHouse](https://github.com/clickhouse/clickhouse) database instance, which receives its data from our [custom OTel Collector](https://github.com/ExplorViz/otel-collector) via the ClickHouse exporter. The [custom schema](https://github.com/ExplorViz/deployment/tree/main/docker/compose/configurations/clickhouse) based on the ClickHouse exporter's default schema for traces with some materialized columns for efficient attribute access.
+Traces are queried from a [ClickHouse](https://github.com/clickhouse/clickhouse) database instance, which receives its data from our [custom OTel Collector](https://github.com/ExplorViz/otel-collector) via the ClickHouse exporter. We also employ a [custom schema](https://github.com/ExplorViz/deployment/tree/main/docker/compose/configurations/clickhouse) based on the ClickHouse exporter's default schema for traces with some materialized columns for efficient attribute access.
 
 For development instructions, continue reading below. If you just want to run ExplorViz locally, refer to our [Deployment repository](https://github.com/ExplorViz/deployment) instead.
 

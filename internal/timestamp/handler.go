@@ -2,7 +2,6 @@ package timestamp
 
 import (
 	"encoding/json"
-	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -25,7 +24,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 func (h *Handler) getTimestamps(w http.ResponseWriter, r *http.Request) {
 	newest, err := strconv.ParseUint(r.URL.Query().Get("newest"), 10, 64)
 	if err != nil {
-		newest = math.MaxUint64
+		newest = 0
 	}
 
 	oldest, err := strconv.ParseUint(r.URL.Query().Get("oldest"), 10, 64)
@@ -49,7 +48,7 @@ func (h *Handler) getTimestamps(w http.ResponseWriter, r *http.Request) {
 
 	commit := r.URL.Query().Get("commit")
 
-	ts, err := h.repo.findTimestamps(r.Context(), lt, oldest, newest, bucketSize, commit)
+	ts, err := h.repo.findTimestamps(r.Context(), lt, newest, oldest, bucketSize, commit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
