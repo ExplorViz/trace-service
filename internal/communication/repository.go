@@ -9,8 +9,7 @@ import (
 )
 
 type Repository struct {
-	Conn  driver.Conn
-	Table string
+	Conn driver.Conn
 }
 
 // findCommunication searches the database for any spans starting within the time span given by fromUnixNano (inclusive) and toUnixNano (exclusive)
@@ -116,49 +115,4 @@ func (r *Repository) findCommunication(
 		ToUnixNano:     to,
 		MetricsSummary: ms,
 	}, nil
-}
-
-// findFileCommDetails searches the database for any function calls underlying the communication between a source and target visualization object.
-// The searched time interval can be further restricted using fromUnixNano (inclusive) and toUnixNano (inclusive). To restrict search for spans
-// to those associated with a specific commit, the commitHash value can be used. If left empty, then the search is explicitly restricted to spans
-// that have no associated commit.
-func (r Repository) findFileCommDetails(
-	ctx context.Context, landscapeToken string, sourceVizObjID string, targetVizObjID string, fromUnixNano uint64, toUnixNano uint64, commitHash string,
-) ([]FunctionCall, error) {
-
-	fns := []FunctionCall{}
-
-	params := []any{
-		clickhouse.Named("landscapeToken", landscapeToken),
-		clickhouse.Named("src", sourceVizObjID),
-		clickhouse.Named("tgt", targetVizObjID),
-		clickhouse.Named("from", fromUnixNano),
-		clickhouse.Named("to", toUnixNano),
-		clickhouse.Named("commit", commitHash),
-	}
-
-	err := r.Conn.Select(ctx, &fns, `
-		SELECT
-			c.ExplorvizEntityId AS ID,
-			c.ExplorvizFuncName AS FuncName,
-			c.ExplorvizVizObjectId = @tgt AS IsForward,
-			count() AS CallCount,
-			sum(Duration) AS ExecutionTime
-		FROM otel_traces c
-		INNER JOIN otel_traces p
-			ON c.ParentSpanId = p.SpanId
-			AND c.ExplorvizTokenId = p.ExplorvizTokenId
-		WHERE
-			c.ExplorvizTokenId = @landscapeToken
-			AND ((c.ExplorvizVizObjectId = @src AND p.ExplorvizVizObjectId = @tgt) OR (c.ExplorvizVizObjectId = @tgt AND p.ExplorvizVizObjectId = @src))
-			AND c.Timestamp_ns >= @from
-			AND c.Timestamp_ns <= @to
-			AND coalesce(c.SpanAttributes['vcs.ref.head.revision'], '') = @commit
-		GROUP BY c.ExplorvizEntityId, c.ExplorvizVizObjectId, c.ExplorvizFuncName;
-	`, params...)
-	if err != nil {
-		return []FunctionCall{}, err
-	}
-
-	return fns, nil
 }
