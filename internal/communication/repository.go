@@ -79,6 +79,15 @@ func (r *Repository) findCommunication(
 		return CommSummary{}, err
 	}
 
+	if len(cs) == 0 {
+		return CommSummary{
+			Comms:          []Comm{},
+			FromUnixNano:   0,
+			ToUnixNano:     0,
+			MetricsSummary: map[string]MetricRange{},
+		}, nil
+	}
+
 	var from int64 = math.MaxInt64
 	var to int64 = math.MinInt64
 	ms := make(map[string]MetricRange)
