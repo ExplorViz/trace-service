@@ -59,23 +59,26 @@ func (h *Handler) getSpans(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, sreq := range sreqs {
-		if sreq.SourceVizObjId == "" || sreq.TargetVizObjId == "" {
+		if sreq.SourceVizObjectId == "" || sreq.TargetVizObjectId == "" {
 			http.Error(w, "A request object is missing source or target visualization object ID", http.StatusBadRequest)
 			return
 		}
 	}
 
-	var s []Span
+	var cs CommSpans
 	if len(sreqs) == 0 {
-		s = []Span{}
+		cs = CommSpans{
+			Spans: map[string]Span{},
+			Pairs: []SpanPair{},
+		}
 	} else {
-		if s, err = h.repo.findSpans(r.Context(), lt, sreqs, from, to, commit, limit, offset); err != nil {
+		if cs, err = h.repo.findSpans(r.Context(), lt, sreqs, from, to, commit, limit, offset); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
 
-	if err := json.NewEncoder(w).Encode(s); err != nil {
+	if err := json.NewEncoder(w).Encode(cs); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

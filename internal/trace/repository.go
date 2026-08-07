@@ -14,13 +14,13 @@ type Repository struct {
 
 func (r *Repository) findSpans(
 	ctx context.Context, landscapeToken string, sreqs []spanRequest, fromUnixNano uint64, toUnixNano uint64, commitHash string, limit uint64, offset uint64,
-) ([]Span, error) {
+) (CommSpans, error) {
 
 	comms := make([]clickhouse.GroupSet, len(sreqs))
 	for i, sreq := range sreqs {
 		comms[i] = clickhouse.GroupSet{Value: []any{
-			min(sreq.SourceVizObjId, sreq.TargetVizObjId),
-			max(sreq.SourceVizObjId, sreq.TargetVizObjId),
+			min(sreq.SourceVizObjectId, sreq.TargetVizObjectId),
+			max(sreq.SourceVizObjectId, sreq.TargetVizObjectId),
 		}}
 	}
 
@@ -40,43 +40,95 @@ func (r *Repository) findSpans(
 		queryLimit += " OFFSET " + strconv.FormatUint(offset, 10)
 	}
 
-	s := []Span{}
+	spans := []Span{}
 
-	err := r.Conn.Select(ctx, &s, `
+	err := r.Conn.Select(ctx, &spans, `
+		WITH comms AS (
+			SELECT
+				c.TraceId AS TraceId,
+
+				c.SpanId AS ChildSpanId,
+				c.SpanName AS ChildSpanName,
+				c.SpanKind AS ChildSpanKind,
+				c.Timestamp_ns AS ChildStartTime,
+				c.Timestamp_ns + c.Duration AS ChildEndTime,
+				c.SpanAttributes AS ChildSpanAttributes,
+				c.ResourceAttributes AS ChildResourceAttributes,
+
+				p.SpanId AS ParentSpanId,
+				p.ParentSpanId AS ParentParentSpanId,
+				p.SpanName AS ParentSpanName,
+				p.SpanKind AS ParentSpanKind,
+				p.Timestamp_ns AS ParentStartTime,
+				p.Timestamp_ns + p.Duration AS ParentEndTime,
+				p.SpanAttributes AS ParentSpanAttributes,
+				p.ResourceAttributes AS ParentResourceAttributes
+			FROM otel_traces c
+			INNER JOIN otel_traces p
+				ON c.ParentSpanId = p.SpanId
+				AND c.ExplorvizTokenId = p.ExplorvizTokenId
+			WHERE
+				c.ExplorvizTokenId = @landscapeToken
+				AND (
+					least(c.ExplorvizVizObjectId, p.ExplorvizVizObjectId),
+					greatest(c.ExplorvizVizObjectId, p.ExplorvizVizObjectId)
+				) IN (@comms)
+				AND c.Timestamp_ns >= @from
+				AND c.Timestamp_ns <= @to
+				AND coalesce(c.SpanAttributes['vcs.ref.head.revision'], '') = @commit
+		)
+
 		SELECT
-			c.SpanId AS SpanID,
-			children.ChildSpanIDs,
-			c.SpanName AS Name,
-			c.SpanKind AS Kind,
-			c.Timestamp_ns AS StartTime,
-			c.Timestamp_ns + c.Duration AS EndTime,
-			c.SpanAttributes AS SpanAttribs,
-			c.ResourceAttributes AS ResourceAttribs
-		FROM otel_traces c
-		INNER JOIN otel_traces p
-			ON c.ParentSpanId = p.SpanId
-			AND c.ExplorvizTokenId = p.ExplorvizTokenId
-		LEFT JOIN (
-			SELECT ParentSpanId, groupArray(SpanId) AS ChildSpanIDs
-			FROM otel_traces
-			GROUP BY ParentSpanId
-		) children
-			ON children.ParentSpanId = c.SpanId
-		WHERE
-			c.ExplorvizTokenId = @landscapeToken
-			AND (
-				least(c.ExplorvizVizObjectId, p.ExplorvizVizObjectId),
-				greatest(c.ExplorvizVizObjectId, p.ExplorvizVizObjectId)
-			) IN (@comms)
-			AND c.Timestamp_ns >= @from
-			AND c.Timestamp_ns <= @to
-			AND coalesce(c.SpanAttributes['vcs.ref.head.revision'], '') = @commit
+			TraceId AS TraceID,
+			ChildSpanId AS SpanID,
+			ParentSpanId AS ParentSpanID,
+			ChildSpanName AS Name,
+			ChildSpanKind AS Kind,
+			ChildStartTime AS StartUnixNano,
+			ChildEndTime AS EndUnixNano,
+			ChildSpanAttributes AS SpanAttribs,
+			ChildResourceAttributes AS ResourceAttribs
+		FROM comms
+
+		UNION DISTINCT
+
+		SELECT
+			TraceId AS TraceID,
+			ParentSpanId AS SpanID,
+			ParentParentSpanId AS ParentSpanID,
+			ParentSpanName AS Name,
+			ParentSpanKind AS Kind,
+			ParentStartTime AS StartUnixNano,
+			ParentEndTime AS EndUnixNano,
+			ParentSpanAttributes AS SpanAttribs,
+			ParentResourceAttributes AS ResourceAttribs
+		FROM comms
+
+		ORDER BY StartUnixNano ASC
 		`+queryLimit, params...)
 	if err != nil {
-		return []Span{}, err
+		return CommSpans{}, err
 	}
 
-	return s, nil
+	cs := CommSpans{
+		Spans: make(map[string]Span, len(spans)),
+		Pairs: make([]SpanPair, 0, len(spans)/2),
+	}
+
+	for _, span := range spans {
+		cs.Spans[span.SpanID] = span
+	}
+
+	for _, span := range spans {
+		if _, ok := cs.Spans[span.ParentSpanID]; ok {
+			cs.Pairs = append(cs.Pairs, SpanPair{
+				ParentSpanID: span.ParentSpanID,
+				ChildSpanID:  span.SpanID,
+			})
+		}
+	}
+
+	return cs, nil
 }
 
 func (r Repository) deleteAll(ctx context.Context, landscapeToken string) error {

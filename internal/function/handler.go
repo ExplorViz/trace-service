@@ -51,7 +51,7 @@ func (h *Handler) getFuncs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, freq := range freqs {
-		if freq.SourceVizObjId == "" || freq.TargetVizObjId == "" {
+		if freq.SourceVizObjectId == "" || freq.TargetVizObjectId == "" {
 			http.Error(w, "A request object is missing source or target visualization object ID", http.StatusBadRequest)
 			return
 		}

@@ -17,6 +17,6 @@ type FunctionCall struct {
 }
 
 type funcRequest struct {
-	SourceVizObjId string `json:"source"`
-	TargetVizObjId string `json:"target"`
+	SourceVizObjectId string `json:"source"`
+	TargetVizObjectId string `json:"target"`
 }

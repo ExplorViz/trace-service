@@ -22,8 +22,8 @@ func (r Repository) findCommFunctions(
 	comms := make([]clickhouse.GroupSet, len(freqs))
 	for i, freq := range freqs {
 		comms[i] = clickhouse.GroupSet{Value: []any{
-			min(freq.SourceVizObjId, freq.TargetVizObjId),
-			max(freq.SourceVizObjId, freq.TargetVizObjId),
+			min(freq.SourceVizObjectId, freq.TargetVizObjectId),
+			max(freq.SourceVizObjectId, freq.TargetVizObjectId),
 		}}
 	}
 
