@@ -2,7 +2,9 @@ package trace
 
 import (
 	"context"
+	"log/slog"
 	"strconv"
+	"strings"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -10,6 +12,195 @@ import (
 
 type Repository struct {
 	Conn driver.Conn
+}
+
+type spanSearchParams struct {
+	Name              *string
+	IncludeAttribKeys bool
+	IncludeAttribVals bool
+
+	TelemetryKey *string
+	ServiceName  *string
+
+	Kind *string
+
+	FromUnixNano *uint64
+	ToUnixNano   *uint64
+
+	TraceID    *string
+	CommitHash *string
+
+	SortBy spanSearchSorting
+
+	// Limits the number of retrieved rows, for use with paginiation.
+	Limit *uint64
+
+	// Specifies the last received span from the previous request.
+	Cursor *spanSearchCursor
+}
+
+type spanSearchSorting int
+
+const (
+	SortNewest spanSearchSorting = iota
+	SortOldest
+	SortDuration
+)
+
+// A spanSearchCursor specifies the last seen span from a prior request.
+// This can be used for pagination.
+type spanSearchCursor struct {
+	SpanID    string
+	Timestamp uint64
+	Duration  uint64
+}
+
+// findLandscapeSpans searches the database for spans associated with the given landscape.
+// The search space can be restricted using a variety of filter options (see [spanSearchParams]).
+func (r *Repository) findLandscapeSpans(ctx context.Context, landscapeToken string, params spanSearchParams) ([]Span, error) {
+	queryParams := make([]any, 0, 13)
+	var conditions strings.Builder
+
+	queryParams = append(queryParams, clickhouse.Named("landscapeToken", landscapeToken))
+
+	if params.Name != nil {
+		conditions.WriteString(" AND (hasAllTokens(Name, @name)")
+		queryParams = append(queryParams, clickhouse.Named("name", *params.Name))
+
+		if params.IncludeAttribKeys {
+			conditions.WriteString(`
+				OR (
+					hasAllTokens(mapKeys(SpanAttributes), @name)
+					OR hasAllTokens(mapKeys(ResourceAttributes), @name)
+				)`)
+		}
+
+		if params.IncludeAttribVals {
+			conditions.WriteString(`
+				OR (
+					hasAllTokens(mapValues(SpanAttributes), @name)
+					OR hasAllTokens(mapValues(ResourceAttributes), @name)
+				)`)
+		}
+		conditions.WriteString(")")
+	}
+
+	if params.ServiceName != nil {
+		conditions.WriteString(" AND ServiceName = @serviceName")
+		queryParams = append(queryParams, clickhouse.Named("serviceName", *params.ServiceName))
+	}
+
+	if params.TelemetryKey != nil {
+		conditions.WriteString(" AND ExplorvizTelemetryKey = @telemetryKey")
+		queryParams = append(queryParams, clickhouse.Named("telemetryKey", *params.TelemetryKey))
+	}
+
+	if params.Kind != nil {
+		conditions.WriteString(" AND SpanKind = @kind")
+		queryParams = append(queryParams, clickhouse.Named("kind", *params.Kind))
+	}
+
+	if params.FromUnixNano != nil {
+		conditions.WriteString(" AND Timestamp_ns >= @from")
+		queryParams = append(queryParams, clickhouse.Named("from", *params.FromUnixNano))
+	}
+
+	if params.ToUnixNano != nil {
+		conditions.WriteString(" AND Timestamp_ns < @to")
+		queryParams = append(queryParams, clickhouse.Named("to", *params.ToUnixNano))
+	}
+
+	if params.TraceID != nil {
+		conditions.WriteString(" AND TraceId = @traceId")
+		queryParams = append(queryParams, clickhouse.Named("traceId", *params.TraceID))
+	}
+
+	if params.CommitHash != nil {
+		conditions.WriteString(" AND CommitHash = @commitHash")
+		queryParams = append(queryParams, clickhouse.Named("commitHash", *params.CommitHash))
+	}
+
+	if params.Cursor != nil {
+		switch params.SortBy {
+		case SortNewest:
+			conditions.WriteString(`
+				AND (
+					Timestamp_ns < @cursorTimestamp
+					OR (Timestamp_ns = @cursorTimestamp AND SpanId > @cursorId)
+				)`)
+		case SortOldest:
+			conditions.WriteString(`
+				AND (
+					Timestamp_ns > @cursorTimestamp
+					OR (Timestamp_ns = @cursorTimestamp AND SpanId > @cursorId)
+				)`)
+
+		case SortDuration:
+			conditions.WriteString(`
+				AND (
+					Duration < @cursorDuraton
+					OR (
+						Duration = @cursorDuration
+						AND (
+							Timestamp_ns < @cursorTimestamp
+							OR (Timestamp_ns = @cursorTimestamp AND SpanId > @cursorId)
+						)
+					)
+				)`)
+		default:
+			slog.Error("Received invalid sorting order", "SortBy", params.SortBy)
+		}
+
+		queryParams = append(queryParams,
+			clickhouse.Named("cursorId", params.Cursor.SpanID),
+			clickhouse.Named("cursorTimestamp", params.Cursor.Timestamp),
+			clickhouse.Named("cursorDuration", params.Cursor.Duration),
+		)
+	}
+
+	ordering := ""
+	switch params.SortBy {
+	case SortNewest:
+		ordering += " ORDER BY Timestamp_ns DESC, SpanId ASC"
+	case SortOldest:
+		ordering += " ORDER BY Timestamp_ns ASC, SpanId ASC"
+	case SortDuration:
+		ordering += " ORDER BY Duration DESC, Timestamp_ns DESC, SpanId ASC"
+	default:
+		slog.Error("Received invalid sorting order", "SortBy", params.SortBy)
+	}
+
+	queryLimit := ""
+	if params.Limit != nil {
+		queryLimit = " LIMIT @limit"
+		queryParams = append(queryParams, clickhouse.Named("limit", *params.Limit))
+	}
+
+	spans := []Span{}
+
+	err := r.Conn.Select(ctx, &spans, `
+		SELECT
+			SpanId AS SpanID,
+			TraceId AS TraceID,
+			ParentSpanId AS ParentSpanID,
+			SpanName AS Name,
+			SpanKind AS Kind,
+			ExplorvizTelemetryKey AS TelemetryKey,
+			ServiceName,
+			ScopeName AS InstrumentationScope,
+			Timestamp_ns AS StartUnixNano,
+			Timestamp_ns + Duration AS EndUnixNano,
+			SpanAttributes AS SpanAttribs,
+			ResourceAttributes AS ResourceAttribs
+		FROM otel_traces
+		WHERE
+			ExplorvizTokenId = @landscapeToken
+			`+conditions.String()+ordering+queryLimit, queryParams...)
+	if err != nil {
+		return []Span{}, err
+	}
+
+	return spans, nil
 }
 
 // findEntitySpans searches the database for any spans starting within the time span given by fromUnixNano (inclusive) and toUnixNano (exclusive)
