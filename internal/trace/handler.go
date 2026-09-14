@@ -20,7 +20,6 @@ func NewHandler(r Repository) Handler {
 
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v3/landscapes/{landscapeToken}/spans", h.getLandscapeSpans)
-	mux.HandleFunc("GET /v3/landscapes/{landscapeToken}/entities/{telemetryKey}/spans", h.getEntitySpans)
 	mux.HandleFunc("POST /v3/landscapes/{landscapeToken}/communication/spans", h.getCommunicationSpans)
 	mux.HandleFunc("DELETE /v3/landscapes/{landscapeToken}/trace-data", h.deleteTraceData)
 }
@@ -86,55 +85,6 @@ func (h *Handler) getLandscapeSpans(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewEncoder(w).Encode(spans); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (h *Handler) getEntitySpans(w http.ResponseWriter, r *http.Request) {
-	lt := r.PathValue("landscapeToken")
-	if lt == "" {
-		http.Error(w, "Missing or invalid landscape token in path parameter", http.StatusBadRequest)
-		return
-	}
-
-	telemetryKey := r.PathValue("telemetryKey")
-	if telemetryKey == "" {
-		http.Error(w, "Missing or invalid visualization object ID in path parameter", http.StatusBadRequest)
-		return
-	}
-
-	query := r.URL.Query()
-
-	from, err := strconv.ParseUint(query.Get("from"), 10, 64)
-	if err != nil {
-		from = 0
-	}
-
-	to, err := strconv.ParseUint(query.Get("to"), 10, 64)
-	if err != nil {
-		to = math.MaxUint64
-	}
-
-	commit := query.Get("commit")
-
-	limit, err := strconv.ParseUint(query.Get("limit"), 10, 64)
-	if err != nil {
-		limit = 0
-	}
-
-	offset, err := strconv.ParseUint(query.Get("offset"), 10, 64)
-	if err != nil {
-		offset = 0
-	}
-
-	var s []Span
-	if s, err = h.repo.findEntitySpans(r.Context(), lt, telemetryKey, from, to, commit, limit, offset); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := json.NewEncoder(w).Encode(s); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
