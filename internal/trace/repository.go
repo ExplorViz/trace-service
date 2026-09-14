@@ -15,8 +15,13 @@ type Repository struct {
 }
 
 type spanSearchParams struct {
-	Name              *string
+	// Text tokens to search within spans. By default, only the span name is searched
+	SearchString *string
+
+	// Reports whether the search string should also be applied to span and resource attribute keys
 	IncludeAttribKeys bool
+
+	// Reports whether the search string should also be applied to span and resource attribute values
 	IncludeAttribVals bool
 
 	TelemetryKey *string
@@ -63,9 +68,9 @@ func (r *Repository) findLandscapeSpans(ctx context.Context, landscapeToken stri
 
 	queryParams = append(queryParams, clickhouse.Named("landscapeToken", landscapeToken))
 
-	if params.Name != nil {
+	if params.SearchString != nil {
 		conditions.WriteString(" AND (hasAllTokens(Name, @name)")
-		queryParams = append(queryParams, clickhouse.Named("name", *params.Name))
+		queryParams = append(queryParams, clickhouse.Named("name", *params.SearchString))
 
 		if params.IncludeAttribKeys {
 			conditions.WriteString(`
