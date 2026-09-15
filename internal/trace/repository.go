@@ -209,9 +209,9 @@ func (r *Repository) findLandscapeSpans(ctx context.Context, landscapeToken stri
 }
 
 // findCommunicationSpans searches the database for any spans starting within the time span given by fromUnixNano (inclusive) and toUnixNano (exclusive)
-// where the span has a parent span such that the span pair's visualization object IDs match any one of the provided [commSpansRequest]s. To restrict search
-// for spans to those associated with a specific commit, the commitHash value can be used. If left empty, then the search is explicitly restricted to spans
-// that have no associated commit. A limit and an offset can optionally be specified for pagination.
+// where the span has a parent span such that the span pair's visualization object IDs (telemetry keys) match any one of the provided [commSpansRequest]s.
+// To restrict search for spans to those associated with a specific commit, the commitHash value can be used. If left empty, then the search is explicitly
+// restricted to spans that have no associated commit. A limit and an offset can optionally be specified for pagination.
 func (r *Repository) findCommunicationSpans(
 	ctx context.Context, landscapeToken string, sreqs []commSpansRequest, fromUnixNano uint64, toUnixNano uint64, commitHash string, limit uint64, offset uint64,
 ) (CommSpans, error) {
@@ -250,6 +250,9 @@ func (r *Repository) findCommunicationSpans(
 				c.SpanId AS ChildSpanId,
 				c.SpanName AS ChildSpanName,
 				c.SpanKind AS ChildSpanKind,
+				c.ExplorvizTelemetryKey AS ChildTelemetryKey,
+				c.ServiceName AS ChildServiceName,
+				c.ScopeName AS ChildScopeName,
 				c.Timestamp_ns AS ChildStartTime,
 				c.Timestamp_ns + c.Duration AS ChildEndTime,
 				c.SpanAttributes AS ChildSpanAttributes,
@@ -259,6 +262,9 @@ func (r *Repository) findCommunicationSpans(
 				p.ParentSpanId AS ParentParentSpanId,
 				p.SpanName AS ParentSpanName,
 				p.SpanKind AS ParentSpanKind,
+				p.ExplorvizTelemetryKey AS ParentTelemetryKey,
+				p.ServiceName AS ParentServiceName,
+				p.ScopeName AS ParentScopeName,
 				p.Timestamp_ns AS ParentStartTime,
 				p.Timestamp_ns + p.Duration AS ParentEndTime,
 				p.SpanAttributes AS ParentSpanAttributes,
@@ -284,6 +290,9 @@ func (r *Repository) findCommunicationSpans(
 			ParentSpanId AS ParentSpanID,
 			ChildSpanName AS Name,
 			ChildSpanKind AS Kind,
+			ChildTelemetryKey AS TelemetryKey,
+			ChildServiceName AS ServiceName,
+			ChildScopeName AS InstrumentationScope,
 			ChildStartTime AS StartUnixNano,
 			ChildEndTime AS EndUnixNano,
 			ChildSpanAttributes AS SpanAttribs,
@@ -298,6 +307,9 @@ func (r *Repository) findCommunicationSpans(
 			ParentParentSpanId AS ParentSpanID,
 			ParentSpanName AS Name,
 			ParentSpanKind AS Kind,
+			ParentTelemetryKey AS TelemetryKey,
+			ParentServiceName AS ServiceName,
+			ParentScopeName AS InstrumentationScope,
 			ParentStartTime AS StartUnixNano,
 			ParentEndTime AS EndUnixNano,
 			ParentSpanAttributes AS SpanAttribs,
