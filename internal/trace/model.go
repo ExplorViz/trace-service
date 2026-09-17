@@ -8,6 +8,10 @@ type Span struct {
 	Name         string `json:"name"`
 	Kind         string `json:"kind"`
 
+	TelemetryKey         string `json:"telemetryKey,omitempty"`
+	ServiceName          string `json:"serviceName"`
+	InstrumentationScope string `json:"instrumentationScope"`
+
 	StartUnixNano int64 `json:"startUnixNano,string"`
 	EndUnixNano   int64 `json:"endUnixNano,string"`
 
