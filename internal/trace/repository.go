@@ -184,7 +184,7 @@ func (r *Repository) findLandscapeSpans(ctx context.Context, landscapeToken stri
 	spans := []Span{}
 
 	err := r.Conn.Select(ctx, &spans, `
-		SELECT
+		SELECT DISTINCT
 			SpanId AS SpanID,
 			TraceId AS TraceID,
 			ParentSpanId AS ParentSpanID,
