@@ -34,8 +34,8 @@ func (h *Handler) getLandscapeSpans(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	params := spanSearchParams{
 		SearchString:      strOrNil(query.Get("searchString")),
-		IncludeAttribKeys: query.Get("includeAttributeKeys") != "",
-		IncludeAttribVals: query.Get("includeAttributeValues") != "",
+		IncludeAttribKeys: query.Get("includeAttributeKeys") == "true",
+		IncludeAttribVals: query.Get("includeAttributeValues") == "true",
 		TelemetryKey:      strOrNil(query.Get("telemetryKey")),
 		ServiceName:       strOrNil(query.Get("serviceName")),
 		Kind:              strOrNil(query.Get("kind")),
