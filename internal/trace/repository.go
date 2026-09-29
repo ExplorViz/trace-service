@@ -91,7 +91,7 @@ func (r *Repository) findLandscapeSpans(ctx context.Context, landscapeToken stri
 	}
 
 	if params.ServiceName != nil {
-		conditions.WriteString(" AND ServiceName = @serviceName")
+		conditions.WriteString(" AND ExplorvizServiceName = @serviceName")
 		queryParams = append(queryParams, clickhouse.Named("serviceName", *params.ServiceName))
 	}
 
@@ -191,7 +191,7 @@ func (r *Repository) findLandscapeSpans(ctx context.Context, landscapeToken stri
 			SpanName AS Name,
 			SpanKind AS Kind,
 			ExplorvizTelemetryKey AS TelemetryKey,
-			ServiceName,
+			ExplorvizServiceName AS ServiceName,
 			ScopeName AS InstrumentationScope,
 			Timestamp_ns AS StartUnixNano,
 			Timestamp_ns + Duration AS EndUnixNano,
@@ -251,7 +251,7 @@ func (r *Repository) findCommunicationSpans(
 				c.SpanName AS ChildSpanName,
 				c.SpanKind AS ChildSpanKind,
 				c.ExplorvizTelemetryKey AS ChildTelemetryKey,
-				c.ServiceName AS ChildServiceName,
+				c.ExplorvizServiceName AS ChildServiceName,
 				c.ScopeName AS ChildScopeName,
 				c.Timestamp_ns AS ChildStartTime,
 				c.Timestamp_ns + c.Duration AS ChildEndTime,
@@ -263,7 +263,7 @@ func (r *Repository) findCommunicationSpans(
 				p.SpanName AS ParentSpanName,
 				p.SpanKind AS ParentSpanKind,
 				p.ExplorvizTelemetryKey AS ParentTelemetryKey,
-				p.ServiceName AS ParentServiceName,
+				p.ExplorvizServiceName AS ParentServiceName,
 				p.ScopeName AS ParentScopeName,
 				p.Timestamp_ns AS ParentStartTime,
 				p.Timestamp_ns + p.Duration AS ParentEndTime,
