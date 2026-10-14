@@ -33,8 +33,10 @@ func (r *Repository) findTimestamps(
 		WITH
 			intDiv(Timestamp_ns, @bucketSize) * @bucketSize AS bucket
 		SELECT
-			bucket AS EpochNano,
-			count() AS SpanCount
+			bucket AS FromUnixNano,
+			bucket + @bucketSize AS ToUnixNano,
+			count() AS SpanCount,
+			groupUniqArray(TraceId) AS TraceIDs
 		FROM otel_traces
 		WHERE
 			ExplorvizTokenId = @landscapeToken
