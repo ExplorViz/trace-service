@@ -2,7 +2,6 @@ package communication
 
 import (
 	"encoding/json"
-	"math"
 	"net/http"
 	"strconv"
 )
@@ -30,19 +29,14 @@ func (h *Handler) getComm(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 
-	from, err := strconv.ParseUint(query.Get("from"), 10, 64)
-	if err != nil {
-		from = 0
+	searchParams := commSearchParams{
+		FromUnixNano: parseUintOrNil(query.Get("from")),
+		ToUnixNano:   parseUintOrNil(query.Get("to")),
+		TraceID:      query.Get("traceId"),
+		CommitHash:   query.Get("commit"),
 	}
 
-	to, err := strconv.ParseUint(query.Get("to"), 10, 64)
-	if err != nil {
-		to = math.MaxUint64
-	}
-
-	commit := query.Get("commit")
-
-	cs, err := h.repo.findCommunication(r.Context(), lt, from, to, commit)
+	cs, err := h.repo.findCommunication(r.Context(), lt, searchParams)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -52,4 +46,12 @@ func (h *Handler) getComm(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func parseUintOrNil(s string) *uint64 {
+	v, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return nil
+	}
+	return &v
 }
