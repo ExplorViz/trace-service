@@ -143,7 +143,7 @@ func (r *Repository) findLandscapeSpans(ctx context.Context, landscapeToken stri
 		case SortDuration:
 			conditions.WriteString(`
 				AND (
-					Duration < @cursorDuraton
+					Duration < @cursorDuration
 					OR (
 						Duration = @cursorDuration
 						AND (

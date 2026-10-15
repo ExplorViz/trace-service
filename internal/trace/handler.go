@@ -60,20 +60,29 @@ func (h *Handler) getLandscapeSpans(w http.ResponseWriter, r *http.Request) {
 
 	cursorID := query.Get("cursorId")
 	cursorTs := query.Get("cursorTimestamp")
+	cursorDuration := query.Get("cursorDuration")
 
-	if cursorID != "" && cursorTs != "" {
-		var parsedTs uint64
+	if cursorID != "" && cursorTs != "" && cursorDuration != "" {
 		var err error
+
+		var parsedTs uint64
 		if parsedTs, err = strconv.ParseUint(cursorTs, 10, 64); err != nil {
-			http.Error(w, "Cursor timestamp is not valid Uint64", http.StatusBadRequest)
+			http.Error(w, "Cursor timestamp is not valid uint64", http.StatusBadRequest)
+			return
+		}
+
+		var parsedDuration uint64
+		if parsedDuration, err = strconv.ParseUint(cursorDuration, 10, 64); err != nil {
+			http.Error(w, "Cursor duration is not valid uint64", http.StatusBadRequest)
 			return
 		}
 
 		params.Cursor = &spanSearchCursor{
 			SpanID:    cursorID,
 			Timestamp: parsedTs,
+			Duration:  parsedDuration,
 		}
-	} else if cursorID != "" || cursorTs != "" {
+	} else if cursorID != "" || cursorTs != "" || cursorDuration != "" {
 		http.Error(w, "Provided some, but not all cursor values", http.StatusBadRequest)
 		return
 	}
