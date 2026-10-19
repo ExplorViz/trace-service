@@ -14,6 +14,161 @@ type Repository struct {
 	Conn driver.Conn
 }
 
+type searchSorting int
+
+const (
+	sortNewest searchSorting = iota
+	sortOldest
+	sortDuration
+)
+
+type traceSearchParams struct {
+	FromUnixNano *uint64
+	ToUnixNano   *uint64
+
+	TelemetryKey *string
+	ServiceName  *string
+
+	CommitHash *string
+
+	SortBy searchSorting
+
+	// Limits the number of retrieved rows, for use with paginiation.
+	Limit *uint64
+
+	// Specifies the last received trace from the previous request.
+	Cursor *traceSearchCursor
+}
+
+// A traceSearchCursor specifies the last seen trace from a prior request.
+// This can be used for pagination.
+type traceSearchCursor struct {
+	TraceID   string
+	Timestamp uint64
+	Duration  uint64
+}
+
+// findLandscapeTraces searches the database for traces associated with the given landscape.
+// The search space can be restricted using a variety of filter options (see [traceSearchParams]).
+func (r *Repository) findLandscapeTraces(ctx context.Context, landscapeToken string, params traceSearchParams) ([]TraceOverview, error) {
+	queryParams := make([]any, 0, 10)
+	queryParams = append(queryParams, clickhouse.Named("landscapeToken", landscapeToken))
+
+	var conditions strings.Builder
+
+	if params.FromUnixNano != nil {
+		conditions.WriteString(" AND Timestamp_ns >= @from")
+		queryParams = append(queryParams, clickhouse.Named("from", *params.FromUnixNano))
+	}
+
+	if params.ToUnixNano != nil {
+		conditions.WriteString(" AND Timestamp_ns < @to")
+		queryParams = append(queryParams, clickhouse.Named("to", *params.ToUnixNano))
+	}
+
+	if params.ServiceName != nil {
+		conditions.WriteString(" AND ExplorvizServiceName = @serviceName")
+		queryParams = append(queryParams, clickhouse.Named("serviceName", *params.ServiceName))
+	}
+
+	if params.TelemetryKey != nil {
+		conditions.WriteString(" AND ExplorvizTelemetryKey = @telemetryKey")
+		queryParams = append(queryParams, clickhouse.Named("telemetryKey", *params.TelemetryKey))
+	}
+
+	if params.CommitHash != nil {
+		conditions.WriteString(" AND CommitHash = @commitHash")
+		queryParams = append(queryParams, clickhouse.Named("commitHash", *params.CommitHash))
+	}
+
+	queryCursor := ""
+	if params.Cursor != nil {
+		switch params.SortBy {
+		case sortNewest:
+			queryCursor = `
+				HAVING
+					StartUnixNano < @cursorTimestamp
+					OR (StartUnixNano = @cursorTimestamp AND TraceId > @cursorId)`
+		case sortOldest:
+			queryCursor = `
+				HAVING
+					StartUnixNano > @cursorTimestamp
+					OR (StartUnixNano = @cursorTimestamp AND TraceId > @cursorId)`
+
+		case sortDuration:
+			queryCursor = `
+				HAVING
+					EndUnixNano - StartUnixNano < @cursorDuration
+					OR (
+						EndUnixNano - StartUnixNano = @cursorDuration
+						AND (
+							StartUnixNano < @cursorTimestamp
+							OR (StartUnixNano = @cursorTimestamp AND TraceId > @cursorId)
+						)
+					)`
+		default:
+			slog.Error("Received invalid sorting order", "SortBy", params.SortBy)
+		}
+
+		queryParams = append(queryParams,
+			clickhouse.Named("cursorId", params.Cursor.TraceID),
+			clickhouse.Named("cursorTimestamp", params.Cursor.Timestamp),
+			clickhouse.Named("cursorDuration", params.Cursor.Duration),
+		)
+	}
+
+	ordering := ""
+	switch params.SortBy {
+	case sortNewest:
+		ordering += " ORDER BY StartUnixNano DESC, TraceId ASC"
+	case sortOldest:
+		ordering += " ORDER BY StartUnixNano ASC, TraceId ASC"
+	case sortDuration:
+		ordering += " ORDER BY EndUnixNano - StartUnixNano DESC, Timestamp_ns DESC, TraceId ASC"
+	default:
+		slog.Error("Received invalid sorting order", "SortBy", params.SortBy)
+	}
+
+	queryLimit := ""
+	if params.Limit != nil {
+		queryLimit = " LIMIT @limit"
+		queryParams = append(queryParams, clickhouse.Named("limit", *params.Limit))
+	}
+
+	query := `
+		SELECT
+			TraceId AS TraceID,
+			COUNT(DISTINCT SpanId) AS SpanCount,
+			coalesce(
+			    anyOrNullIf(SpanName, empty(ParentSpanId)),
+			    argMin(SpanName, Timestamp_ns)
+			) AS Name,
+			groupUniqArray(coalesce(ExplorvizServiceName, ServiceName)) AS Services,
+			min(Timestamp_ns) AS StartUnixNano,
+			max(Timestamp_ns + Duration) AS EndUnixNano,
+			coalesce(
+				anyOrNullIf(coalesce(ExplorvizServiceName, ServiceName), empty(ParentSpanId)),
+				argMin(coalesce(ExplorvizServiceName, ServiceName), Timestamp_ns)
+			) AS EntrypointService
+		FROM otel_traces
+		WHERE TraceId IN (
+			SELECT TraceId
+			FROM otel_traces
+			WHERE ExplorvizTokenId = @landscapeToken ` + conditions.String() + `
+		)
+		GROUP BY TraceId
+		` + queryCursor + ordering + queryLimit
+
+	traces := []TraceOverview{}
+
+	err := r.Conn.Select(ctx, &traces, query, queryParams...)
+	if err != nil {
+		return []TraceOverview{}, err
+	}
+
+	return traces, nil
+}
+
 type spanSearchParams struct {
 	// Text tokens to search within spans. By default, only the span name is searched
 	SearchString *string
@@ -35,7 +190,7 @@ type spanSearchParams struct {
 	TraceID    *string
 	CommitHash *string
 
-	SortBy spanSearchSorting
+	SortBy searchSorting
 
 	// Limits the number of retrieved rows, for use with paginiation.
 	Limit *uint64
@@ -43,14 +198,6 @@ type spanSearchParams struct {
 	// Specifies the last received span from the previous request.
 	Cursor *spanSearchCursor
 }
-
-type spanSearchSorting int
-
-const (
-	SortNewest spanSearchSorting = iota
-	SortOldest
-	SortDuration
-)
 
 // A spanSearchCursor specifies the last seen span from a prior request.
 // This can be used for pagination.
@@ -127,20 +274,20 @@ func (r *Repository) findLandscapeSpans(ctx context.Context, landscapeToken stri
 
 	if params.Cursor != nil {
 		switch params.SortBy {
-		case SortNewest:
+		case sortNewest:
 			conditions.WriteString(`
 				AND (
 					Timestamp_ns < @cursorTimestamp
 					OR (Timestamp_ns = @cursorTimestamp AND SpanId > @cursorId)
 				)`)
-		case SortOldest:
+		case sortOldest:
 			conditions.WriteString(`
 				AND (
 					Timestamp_ns > @cursorTimestamp
 					OR (Timestamp_ns = @cursorTimestamp AND SpanId > @cursorId)
 				)`)
 
-		case SortDuration:
+		case sortDuration:
 			conditions.WriteString(`
 				AND (
 					Duration < @cursorDuration
@@ -165,11 +312,11 @@ func (r *Repository) findLandscapeSpans(ctx context.Context, landscapeToken stri
 
 	ordering := ""
 	switch params.SortBy {
-	case SortNewest:
+	case sortNewest:
 		ordering += " ORDER BY Timestamp_ns DESC, SpanId ASC"
-	case SortOldest:
+	case sortOldest:
 		ordering += " ORDER BY Timestamp_ns ASC, SpanId ASC"
-	case SortDuration:
+	case sortDuration:
 		ordering += " ORDER BY Duration DESC, Timestamp_ns DESC, SpanId ASC"
 	default:
 		slog.Error("Received invalid sorting order", "SortBy", params.SortBy)
@@ -181,10 +328,7 @@ func (r *Repository) findLandscapeSpans(ctx context.Context, landscapeToken stri
 		queryParams = append(queryParams, clickhouse.Named("limit", *params.Limit))
 	}
 
-	spans := []Span{}
-
-	err := r.Conn.Select(ctx, &spans, `
-		SELECT
+	query := `SELECT
 			SpanId AS SpanID,
 			TraceId AS TraceID,
 			ParentSpanId AS ParentSpanID,
@@ -200,7 +344,11 @@ func (r *Repository) findLandscapeSpans(ctx context.Context, landscapeToken stri
 		FROM otel_traces
 		WHERE
 			ExplorvizTokenId = @landscapeToken
-			`+conditions.String()+ordering+queryLimit, queryParams...)
+			` + conditions.String() + ordering + queryLimit
+
+	spans := []Span{}
+
+	err := r.Conn.Select(ctx, &spans, query, queryParams...)
 	if err != nil {
 		return []Span{}, err
 	}
