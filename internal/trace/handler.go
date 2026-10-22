@@ -19,9 +19,71 @@ func NewHandler(r Repository) Handler {
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {
+	mux.HandleFunc("GET /v3/landscapes/{landscapeToken}/traces", h.getLandscapeTraces)
 	mux.HandleFunc("GET /v3/landscapes/{landscapeToken}/spans", h.getLandscapeSpans)
 	mux.HandleFunc("POST /v3/landscapes/{landscapeToken}/communication/spans", h.getCommunicationSpans)
 	mux.HandleFunc("DELETE /v3/landscapes/{landscapeToken}/trace-data", h.deleteTraceData)
+}
+
+func (h *Handler) getLandscapeTraces(w http.ResponseWriter, r *http.Request) {
+	lt := r.PathValue("landscapeToken")
+	if lt == "" {
+		http.Error(w, "Missing or invalid landscape token in path parameter", http.StatusBadRequest)
+		return
+	}
+
+	query := r.URL.Query()
+	params := traceSearchParams{
+		FromUnixNano: parseUintOrNil(query.Get("from")),
+		ToUnixNano:   parseUintOrNil(query.Get("to")),
+		ServiceName:  strOrNil(query.Get("serviceName")),
+		TelemetryKey: strOrNil(query.Get("telemetryKey")),
+		CommitHash:   strOrNil(query.Get("commit")),
+		Limit:        parseUintOrNil(query.Get("limit")),
+	}
+
+	switch sortBy := query.Get("sortBy"); sortBy {
+	case "", "newest":
+		params.SortBy = sortNewest
+	case "oldest":
+		params.SortBy = sortOldest
+	case "duration":
+		params.SortBy = sortDuration
+	default:
+		http.Error(w, fmt.Sprintf(`Invalid value %s for parameter "sortBy"`, sortBy), http.StatusBadRequest)
+		return
+	}
+
+	cursorID := query.Get("cursorId")
+	cursorTs := query.Get("cursorTimestamp")
+
+	if cursorID != "" && cursorTs != "" {
+		var parsedTs uint64
+		var err error
+		if parsedTs, err = strconv.ParseUint(cursorTs, 10, 64); err != nil {
+			http.Error(w, "Cursor timestamp is not valid Uint64", http.StatusBadRequest)
+			return
+		}
+
+		params.Cursor = &traceSearchCursor{
+			TraceID:   cursorID,
+			Timestamp: parsedTs,
+		}
+	} else if cursorID != "" || cursorTs != "" {
+		http.Error(w, "Provided some, but not all cursor values", http.StatusBadRequest)
+		return
+	}
+
+	traces, err := h.repo.findLandscapeTraces(r.Context(), lt, params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(traces); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *Handler) getLandscapeSpans(w http.ResponseWriter, r *http.Request) {
@@ -48,11 +110,11 @@ func (h *Handler) getLandscapeSpans(w http.ResponseWriter, r *http.Request) {
 
 	switch sortBy := query.Get("sortBy"); sortBy {
 	case "", "newest":
-		params.SortBy = SortNewest
+		params.SortBy = sortNewest
 	case "oldest":
-		params.SortBy = SortOldest
+		params.SortBy = sortOldest
 	case "duration":
-		params.SortBy = SortDuration
+		params.SortBy = sortDuration
 	default:
 		http.Error(w, fmt.Sprintf(`Invalid value %s for parameter "sortBy"`, sortBy), http.StatusBadRequest)
 		return
@@ -60,20 +122,29 @@ func (h *Handler) getLandscapeSpans(w http.ResponseWriter, r *http.Request) {
 
 	cursorID := query.Get("cursorId")
 	cursorTs := query.Get("cursorTimestamp")
+	cursorDuration := query.Get("cursorDuration")
 
-	if cursorID != "" && cursorTs != "" {
-		var parsedTs uint64
+	if cursorID != "" && cursorTs != "" && cursorDuration != "" {
 		var err error
+
+		var parsedTs uint64
 		if parsedTs, err = strconv.ParseUint(cursorTs, 10, 64); err != nil {
-			http.Error(w, "Cursor timestamp is not valid Uint64", http.StatusBadRequest)
+			http.Error(w, "Cursor timestamp is not valid uint64", http.StatusBadRequest)
+			return
+		}
+
+		var parsedDuration uint64
+		if parsedDuration, err = strconv.ParseUint(cursorDuration, 10, 64); err != nil {
+			http.Error(w, "Cursor duration is not valid uint64", http.StatusBadRequest)
 			return
 		}
 
 		params.Cursor = &spanSearchCursor{
 			SpanID:    cursorID,
 			Timestamp: parsedTs,
+			Duration:  parsedDuration,
 		}
-	} else if cursorID != "" || cursorTs != "" {
+	} else if cursorID != "" || cursorTs != "" || cursorDuration != "" {
 		http.Error(w, "Provided some, but not all cursor values", http.StatusBadRequest)
 		return
 	}

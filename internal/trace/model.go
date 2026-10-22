@@ -1,5 +1,30 @@
 package trace
 
+// A TraceOverview is a surface-level summary of an OpenTelemetry trace.
+type TraceOverview struct {
+	TraceID string `json:"traceId"`
+
+	// Name of the root span of the trace.
+	Name string `json:"name"`
+
+	// Minimum of the start times of all spans in the trace,
+	// given in nanoseconds since the Unix epoch.
+	StartUnixNano int64 `json:"startUnixNano,string"`
+
+	// Maximum of the end times of all spans in the trace,
+	// given in nanoseconds since the Unix epoch.
+	EndUnixNano int64 `json:"endUnixNano,string"`
+
+	// Number of spans that are part of this trace.
+	SpanCount uint64 `json:"spanCount"`
+
+	// The names of all services involved in the trace.
+	Services []string `json:"services"`
+
+	// Name of the service from which the root span originates.
+	EntrypointService string `json:"entrypointService"`
+}
+
 // A Span is a detailed representation of an OpenTelemetry span.
 type Span struct {
 	SpanID       string `json:"spanId"`

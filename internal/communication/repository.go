@@ -3,6 +3,7 @@ package communication
 import (
 	"context"
 	"math"
+	"strings"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -12,20 +13,50 @@ type Repository struct {
 	Conn driver.Conn
 }
 
-// findCommunication searches the database for any spans starting within the time span given by fromUnixNano (inclusive) and toUnixNano (exclusive)
-// where the span has a parent span. The child and parent span pairs are grouped by the visualization objects they represent, where the parent span
-// indicates the source object and the child indicates the target object. A single communication is inferred for any such source-target pair.
-// For each communication, general metrics are computed. To restrict search for spans to those associated with a specific commit, the commitHash value
-// can be used. If left empty, then the search is explicitly restricted to spans that have no associated commit.
-func (r *Repository) findCommunication(
-	ctx context.Context, landscapeToken string, fromUnixNano uint64, toUnixNano uint64, commitHash string,
-) (CommSummary, error) {
+type commSearchParams struct {
+	// Starting timestamp given in nanoseconds since Unix epoch.
+	// All matched communication must start at or after this timestamp.
+	FromUnixNano *uint64
 
-	params := []any{
-		clickhouse.Named("landscapeToken", landscapeToken),
-		clickhouse.Named("from", fromUnixNano),
-		clickhouse.Named("to", toUnixNano),
-		clickhouse.Named("commit", commitHash),
+	// End timestamp given in nanoseconds since Unix epoch.
+	// All matched communication must start before this timestamp.
+	ToUnixNano *uint64
+
+	// Trace ID to which the spans representing the called entity must belong.
+	TraceID string
+
+	// Git commit identifier with which the spans representing the called entity must be associated.
+	// If left empty, the search is explicitly restricted to spans that have no associated commit.
+	CommitHash string
+}
+
+// findCommunication searches the database for parent-child span pairs. The child and parent span pairs are grouped by the visualization objects they represent,
+// where the parent span indicates the source object and the child indicates the target object. A single communication is inferred for any such source-target pair.
+// For each communication, general metrics are computed.
+func (r *Repository) findCommunication(ctx context.Context, landscapeToken string, searchParams commSearchParams) (CommSummary, error) {
+
+	queryParams := make([]any, 0, 5)
+	queryParams = append(queryParams, clickhouse.Named("landscapeToken", landscapeToken))
+	var conditions strings.Builder
+
+	if searchParams.FromUnixNano != nil {
+		conditions.WriteString(" AND c.Timestamp_ns >= @from")
+		queryParams = append(queryParams, clickhouse.Named("from", *searchParams.FromUnixNano))
+	}
+
+	if searchParams.ToUnixNano != nil {
+		conditions.WriteString(" AND c.Timestamp_ns < @to")
+		queryParams = append(queryParams, clickhouse.Named("to", *searchParams.ToUnixNano))
+	}
+
+	if searchParams.TraceID != "" {
+		conditions.WriteString(" AND c.TraceId = @traceId")
+		queryParams = append(queryParams, clickhouse.Named("traceId", searchParams.TraceID))
+	}
+
+	if searchParams.CommitHash != "" {
+		conditions.WriteString(" AND coalesce(c.SpanAttributes['vcs.ref.head.revision'], '') = @commit")
+		queryParams = append(queryParams, clickhouse.Named("commit", searchParams.CommitHash))
 	}
 
 	cs := []Comm{}
@@ -47,9 +78,7 @@ func (r *Repository) findCommunication(
 				AND c.ExplorvizTokenId = p.ExplorvizTokenId
 			WHERE
 				c.ExplorvizTokenId = @landscapeToken
-				AND c.Timestamp_ns >= @from
-				AND c.Timestamp_ns < @to
-				AND coalesce(c.SpanAttributes['vcs.ref.head.revision'], '') = @commit
+				`+conditions.String()+`
 			GROUP BY
 				c.ExplorvizTelemetryKey, p.ExplorvizTelemetryKey
 		)
@@ -73,7 +102,7 @@ func (r *Repository) findCommunication(
 		WHERE
 			a.SourceTelemetryKey <= a.TargetTelemetryKey
 			OR b.SourceTelemetryKey = '';
-	`, params...)
+	`, queryParams...)
 	if err != nil {
 		return CommSummary{}, err
 	}
