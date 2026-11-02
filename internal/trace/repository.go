@@ -143,12 +143,12 @@ func (r *Repository) findLandscapeTraces(ctx context.Context, landscapeToken str
 			    anyOrNullIf(SpanName, empty(ParentSpanId)),
 			    argMin(SpanName, Timestamp_ns)
 			) AS Name,
-			groupUniqArray(coalesce(ExplorvizServiceName, ServiceName)) AS Services,
+			groupUniqArray(firstNonDefault(ExplorvizServiceName, ServiceName)) AS Services,
 			min(Timestamp_ns) AS StartUnixNano,
 			max(Timestamp_ns + Duration) AS EndUnixNano,
 			coalesce(
-				anyOrNullIf(coalesce(ExplorvizServiceName, ServiceName), empty(ParentSpanId)),
-				argMin(coalesce(ExplorvizServiceName, ServiceName), Timestamp_ns)
+				anyOrNullIf(firstNonDefault(ExplorvizServiceName, ServiceName), empty(ParentSpanId)),
+				argMin(firstNonDefault(ExplorvizServiceName, ServiceName), Timestamp_ns)
 			) AS EntrypointService
 		FROM otel_traces
 		WHERE TraceId IN (
@@ -429,7 +429,7 @@ func (r *Repository) findCommunicationSpans(
 				) IN (@comms)
 				AND c.Timestamp_ns >= @from
 				AND c.Timestamp_ns <= @to
-				AND coalesce(c.SpanAttributes['vcs.ref.head.revision'], '') = @commit
+				AND c.SpanAttributes['vcs.ref.head.revision'] = @commit
 		)
 
 		SELECT

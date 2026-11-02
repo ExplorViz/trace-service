@@ -41,7 +41,7 @@ func (r *Repository) findTimestamps(
 		WHERE
 			ExplorvizTokenId = @landscapeToken
 			AND (Timestamp_ns >= @newest + @bucketSize OR Timestamp_ns < @oldest)
-			AND coalesce(SpanAttributes['vcs.ref.head.revision'], '') = @commit
+			AND SpanAttributes['vcs.ref.head.revision'] = @commit
 		GROUP BY bucket
 		ORDER BY bucket;
 	`, params...)

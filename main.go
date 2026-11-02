@@ -150,6 +150,7 @@ func corsHandler(next http.Handler) http.Handler {
 	allowedOrigins := map[string]struct{}{
 		"http://localhost:4200":                                 {},
 		"http://localhost:8080":                                 {},
+		"http://localhost:18080":                                {},
 		"https://demo.explorviz.uni-kiel.de":                    {},
 		"https://explorviz.sustainkieker.kieker-monitoring.net": {},
 	}

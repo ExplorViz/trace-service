@@ -56,7 +56,7 @@ func (r Repository) findCommFunctions(
 			)
 			AND c.Timestamp_ns >= @from
 			AND c.Timestamp_ns <= @to
-			AND coalesce(c.SpanAttributes['vcs.ref.head.revision'], '') = @commit
+			AND c.SpanAttributes['vcs.ref.head.revision'] = @commit
 		GROUP BY c.ExplorvizEntityId, c.ExplorvizTelemetryKey, p.ExplorvizTelemetryKey, c.ExplorvizFuncName;
 	`, params...)
 	if err != nil {

@@ -55,7 +55,7 @@ func (r *Repository) findCommunication(ctx context.Context, landscapeToken strin
 	}
 
 	if searchParams.CommitHash != "" {
-		conditions.WriteString(" AND coalesce(c.SpanAttributes['vcs.ref.head.revision'], '') = @commit")
+		conditions.WriteString(" AND c.SpanAttributes['vcs.ref.head.revision'] = @commit")
 		queryParams = append(queryParams, clickhouse.Named("commit", searchParams.CommitHash))
 	}
 
@@ -88,8 +88,8 @@ func (r *Repository) findCommunication(ctx context.Context, landscapeToken strin
 			a.SourceTelemetryKey AS SourceTelemetryKey,
 			a.TargetTelemetryKey AS TargetTelemetryKey,
 			b.SourceTelemetryKey != '' AS Bidirectional,
-			least(a.FromUnixNano, coalesce(nullIf(b.FromUnixNano, 0), a.FromUnixNano)) AS FromUnixNano,
-			greatest(a.ToUnixNano, coalesce(nullIf(b.ToUnixNano, 0), a.ToUnixNano)) AS ToUnixNano,
+			least(a.FromUnixNano, firstNonDefault(b.FromUnixNano, a.FromUnixNano)) AS FromUnixNano,
+			greatest(a.ToUnixNano, firstNonDefault(b.ToUnixNano, a.ToUnixNano)) AS ToUnixNano,
 			map (
 				'requestCount', a.RequestCount + b.RequestCount,
 				'functionCount', a.FunctionCount + b.FunctionCount,
