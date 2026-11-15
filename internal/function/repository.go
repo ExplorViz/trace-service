@@ -5,6 +5,8 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+
+	"github.com/ExplorViz/trace-service/internal/instrumentation"
 )
 
 type Repository struct {
@@ -27,7 +29,7 @@ func (r Repository) findCommFunctions(
 		}}
 	}
 
-	params := []any{
+	queryParams := []any{
 		clickhouse.Named("landscapeToken", landscapeToken),
 		clickhouse.Named("comms", comms),
 		clickhouse.Named("from", fromUnixNano),
@@ -35,9 +37,7 @@ func (r Repository) findCommFunctions(
 		clickhouse.Named("commit", commitHash),
 	}
 
-	fns := []FunctionCall{}
-
-	err := r.Conn.Select(ctx, &fns, `
+	query := `
 		SELECT
 			c.ExplorvizEntityId AS ID,
 			c.ExplorvizFuncName AS FuncName,
@@ -58,7 +58,13 @@ func (r Repository) findCommFunctions(
 			AND c.Timestamp_ns <= @to
 			AND c.SpanAttributes['vcs.ref.head.revision'] = @commit
 		GROUP BY c.ExplorvizEntityId, c.ExplorvizTelemetryKey, p.ExplorvizTelemetryKey, c.ExplorvizFuncName;
-	`, params...)
+	`
+	fns := []FunctionCall{}
+
+	span := instrumentation.StartClickHouseSpan(ctx, "SELECT otel_traces otel_traces", query, queryParams)
+	defer span.End()
+
+	err := r.Conn.Select(ctx, &fns, query, queryParams...)
 	if err != nil {
 		return []FunctionCall{}, err
 	}

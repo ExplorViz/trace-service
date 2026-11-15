@@ -8,6 +8,8 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+
+	"github.com/ExplorViz/trace-service/internal/instrumentation"
 )
 
 type Repository struct {
@@ -158,8 +160,10 @@ func (r *Repository) findLandscapeTraces(ctx context.Context, landscapeToken str
 		)
 		GROUP BY TraceId
 		` + queryCursor + ordering + queryLimit
-
 	traces := []TraceOverview{}
+
+	span := instrumentation.StartClickHouseSpan(ctx, "SELECT otel_traces", query, queryParams)
+	defer span.End()
 
 	err := r.Conn.Select(ctx, &traces, query, queryParams...)
 	if err != nil {
@@ -345,8 +349,10 @@ func (r *Repository) findLandscapeSpans(ctx context.Context, landscapeToken stri
 		WHERE
 			ExplorvizTokenId = @landscapeToken
 			` + conditions.String() + ordering + queryLimit
-
 	spans := []Span{}
+
+	span := instrumentation.StartClickHouseSpan(ctx, "SELECT otel_traces", query, queryParams)
+	defer span.End()
 
 	err := r.Conn.Select(ctx, &spans, query, queryParams...)
 	if err != nil {

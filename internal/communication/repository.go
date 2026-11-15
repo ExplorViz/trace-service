@@ -7,6 +7,8 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+
+	"github.com/ExplorViz/trace-service/internal/instrumentation"
 )
 
 type Repository struct {
@@ -59,9 +61,7 @@ func (r *Repository) findCommunication(ctx context.Context, landscapeToken strin
 		queryParams = append(queryParams, clickhouse.Named("commit", searchParams.CommitHash))
 	}
 
-	cs := []Comm{}
-
-	err := r.Conn.Select(ctx, &cs, `
+	query := `
 		// Find communications and aggregate metrics
 		WITH comms AS (
 			SELECT
@@ -78,7 +78,7 @@ func (r *Repository) findCommunication(ctx context.Context, landscapeToken strin
 				AND c.ExplorvizTokenId = p.ExplorvizTokenId
 			WHERE
 				c.ExplorvizTokenId = @landscapeToken
-				`+conditions.String()+`
+				` + conditions.String() + `
 			GROUP BY
 				c.ExplorvizTelemetryKey, p.ExplorvizTelemetryKey
 		)
@@ -102,7 +102,13 @@ func (r *Repository) findCommunication(ctx context.Context, landscapeToken strin
 		WHERE
 			a.SourceTelemetryKey <= a.TargetTelemetryKey
 			OR b.SourceTelemetryKey = '';
-	`, queryParams...)
+	`
+	cs := []Comm{}
+
+	span := instrumentation.StartClickHouseSpan(ctx, "SELECT otel_traces otel_traces SELECT comms comms", query, queryParams)
+	defer span.End()
+
+	err := r.Conn.Select(ctx, &cs, query, queryParams...)
 	if err != nil {
 		return CommSummary{}, err
 	}

@@ -5,6 +5,8 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+
+	"github.com/ExplorViz/trace-service/internal/instrumentation"
 )
 
 type Repository struct {
@@ -19,7 +21,7 @@ func (r *Repository) findTimestamps(
 	ctx context.Context, landscapeToken string, newestUnixNano uint64, oldestUnixNano uint64, bucketSizeNano uint64, commitHash string,
 ) ([]Timestamp, error) {
 
-	params := []any{
+	queryParams := []any{
 		clickhouse.Named("landscapeToken", landscapeToken),
 		clickhouse.Named("bucketSize", bucketSizeNano),
 		clickhouse.Named("newest", newestUnixNano),
@@ -27,9 +29,7 @@ func (r *Repository) findTimestamps(
 		clickhouse.Named("commit", commitHash),
 	}
 
-	ts := []Timestamp{}
-
-	err := r.Conn.Select(ctx, &ts, `
+	query := `
 		WITH
 			intDiv(Timestamp_ns, @bucketSize) * @bucketSize AS bucket
 		SELECT
@@ -44,7 +44,13 @@ func (r *Repository) findTimestamps(
 			AND SpanAttributes['vcs.ref.head.revision'] = @commit
 		GROUP BY bucket
 		ORDER BY bucket;
-	`, params...)
+	`
+	ts := []Timestamp{}
+
+	span := instrumentation.StartClickHouseSpan(ctx, "SELECT otel_traces", query, queryParams)
+	defer span.End()
+
+	err := r.Conn.Select(ctx, &ts, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
